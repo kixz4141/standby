@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>スタンバイ管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP','Hiragino Sans',sans-serif;background:linear-gradient(180deg,#071018,#0a1a28);color:#e0f0ff;min-height:100vh;-webkit-tap-highlight-color:transparent}
+::-webkit-scrollbar{height:4px;width:4px}::-webkit-scrollbar-thumb{background:#1a2e40;border-radius:4px}::-webkit-scrollbar-track{background:transparent}
+.login-screen{position:fixed;inset:0;background:linear-gradient(180deg,#071018,#0a1a28);display:flex;align-items:center;justify-content:center;z-index:99999}
+.login-box{text-align:center;width:90%;max-width:400px}
+.login-box h1{font-size:22px;font-weight:900;margin-bottom:6px;background:linear-gradient(90deg,#2dd4a8,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-box p{font-size:13px;color:#7eaac4;margin-bottom:24px}
+.login-box input{width:100%;padding:14px 18px;background:#0e1e2c;border:2px solid #1e3a50;border-radius:12px;color:#e0f0ff;font-size:18px;font-weight:700;outline:none;text-align:center;margin-bottom:16px}
+.login-box input:focus{border-color:#2dd4a8}
+.login-box input::placeholder{color:#3a5a6a;font-weight:400}
+.role-select{display:flex;gap:10px;margin-bottom:20px;justify-content:center}
+.role-card{flex:1;padding:14px 8px;background:#0e1e2c;border:2px solid #1a2e40;border-radius:12px;cursor:pointer;transition:all .2s;text-align:center}
+.role-card.active{border-color:#2dd4a8;background:#2dd4a810}
+.role-card .role-icon{font-size:24px;margin-bottom:4px}
+.role-card .role-name{font-size:13px;font-weight:700;color:#e0f0ff}
+.role-card .role-desc{font-size:9px;color:#5a8090;margin-top:4px;line-height:1.3}
+.role-card.active .role-name{color:#2dd4a8}
+.login-submit{width:100%;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;color:#091520;background:linear-gradient(135deg,#2dd4a8,#38bdf8)}
+.login-submit:disabled{opacity:.3;cursor:not-allowed}
+.login-history{margin-top:16px;font-size:12px;color:#5a8090}
+.login-history span{display:inline-block;background:#0e1e2c;border:1px solid #1a2e40;border-radius:6px;padding:4px 12px;margin:4px;cursor:pointer;color:#7eaac4}
+.login-history span:hover{border-color:#2dd4a8;color:#2dd4a8}
+.tl-bar{position:sticky;top:0;z-index:100;background:linear-gradient(180deg,#0c1e2e,#091520);padding:8px 16px 0;border-bottom:1px solid #132838}
+.header{padding:12px 16px 0}
+.title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.title-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.event-title{font-size:18px;font-weight:900;letter-spacing:1px;background:linear-gradient(90deg,#2dd4a8,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.badge{font-size:10px;background:linear-gradient(135deg,#2dd4a8,#38bdf8);color:#091520;padding:2px 8px;border-radius:4px;font-weight:700}
+.user-badge{font-size:10px;padding:3px 10px;border-radius:12px;cursor:pointer}
+.role-badge-host{background:#2dd4a820;color:#2dd4a8;border:1px solid #2dd4a850}
+.role-badge-director{background:#38bdf820;color:#38bdf8;border:1px solid #38bdf850}
+.role-badge-staff{background:#a78bfa20;color:#a78bfa;border:1px solid #a78bfa50}
+.clock{text-align:right}.clock-time{font-size:28px;font-weight:900;color:#e0f0ff;font-variant-numeric:tabular-nums;letter-spacing:2px;line-height:1}.clock-label{font-size:9px;color:#5a8090;margin-top:2px}
+.timeline{display:flex;gap:4px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}.timeline::-webkit-scrollbar{display:none}
+.tl-item{min-width:62px;padding:4px 5px;background:#0e1e2c;border:1px solid #1a2e40;border-radius:6px;cursor:pointer;text-align:center;transition:all .2s;flex-shrink:0}
+.tl-item.done{border-color:rgba(45,212,168,.4);background:rgba(45,212,168,.08)}
+.tl-item.selected{border-color:#ff8c42;background:rgba(255,140,66,.12)}
+.tl-time{font-size:10px;font-weight:900;color:#e0f0ff}.tl-name{font-size:7px;color:#7eaac4;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55px;margin:0 auto}
+.tl-count{font-size:7px;margin-top:2px}.c-rem{color:#f87171}.c-done{color:#2dd4a8}.c-sep{color:#2a4050}
+.countdown-bar{background:linear-gradient(90deg,#0e1e2c,#102030,#0e1e2c);border-radius:8px;padding:8px 0;text-align:center;margin:8px 0;border:1px solid #1a2e40}
+.countdown-text{color:#2dd4a8;font-size:15px;font-weight:700;letter-spacing:3px;font-variant-numeric:tabular-nums}
+.offset-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}.offset-label{font-size:12px;color:#5a8090}
+.offset-btn{padding:4px 10px;border-radius:6px;background:#0e1e2c;color:#7eaac4;border:1px solid #1a2e40;cursor:pointer;font-size:12px;font-weight:600}
+.offset-btn.active{background:linear-gradient(135deg,#2dd4a8,#38bdf8);color:#091520;border:none}
+.search-row{display:flex;gap:8px;padding-bottom:12px;align-items:center}.search-wrap{flex:1;position:relative}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#3a5a6a;font-size:14px;pointer-events:none}
+.search-input{width:100%;padding:8px 14px 8px 34px;background:#091520;border:1px solid #1a2e40;border-radius:8px;color:#e0f0ff;font-size:14px;outline:none}
+.search-input:focus{border-color:#2dd4a8}
+.ctrl-btn{padding:8px 14px;background:#0e1e2c;border:1px solid #1a2e40;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap}
+.ctrl-btn.add{color:#38bdf8}.ctrl-btn.reset{color:#f87171}
+.program{margin-top:22px;padding-bottom:18px;border-bottom:1px solid #0e1e2c;scroll-margin-top:120px}
+.prog-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.prog-left{display:flex;align-items:center;gap:10px}.prog-bar{width:4px;height:38px;border-radius:2px}
+.prog-name{font-size:15px;font-weight:800;cursor:default}.prog-time{font-size:11px;color:#5a8090}
+.prog-right{display:flex;gap:8px;align-items:center}
+.start-btn{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;border-width:1px;border-style:solid;background:transparent}
+.prog-count{font-size:11px}
+.perf-grid{display:flex;flex-wrap:wrap;gap:8px}
+.perf-card{background:#fff;border:2px solid #e2eaf0;border-radius:12px;padding:10px 8px 6px;width:100px;height:80px;text-align:center;cursor:pointer;user-select:none;transition:all .18s ease;position:relative;box-shadow:0 2px 10px rgba(0,40,80,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.perf-card.ready{background:#c8d8e4;border-color:#a0b8c8;opacity:.38;box-shadow:none}
+.perf-card.ready .perf-name{color:#8898a8}
+.perf-card.ready .perf-ruby{color:#9aa8b4}
+.perf-card.drag-over{border:2px dashed #38bdf8}
+.perf-card.edit-mode{border-color:#ff8c42;box-shadow:0 0 0 1px #ff8c4260}
+.perf-card[draggable="true"]{cursor:grab}
+.perf-grip{font-size:8px;color:#bcc8d0;letter-spacing:2px;margin-bottom:2px;line-height:1}
+.perf-num{font-size:11px;font-weight:700;margin-bottom:3px;display:flex;justify-content:center;gap:4px;align-items:center;color:#1a1a2a}
+.perf-role{font-size:9px;padding:1px 5px;border-radius:4px;font-weight:600}
+.perf-name{font-size:11px;font-weight:700;color:#1a1a2a;line-height:1.2;margin-bottom:1px;word-break:break-all;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.perf-ruby{font-size:8px;color:#8899aa;line-height:1.1}
+.perf-check{position:absolute;top:2px;left:4px;font-size:8px;color:#fff;font-weight:700;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1;background:#2dd4a8;padding:1px 4px;border-radius:3px}
+.perf-card.ready .perf-check{background:#2b8a70;color:#fff;opacity:1}
+.perf-checkedby{position:absolute;top:2px;right:4px;font-size:8px;color:#fff;font-weight:700;max-width:55px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1;background:#ff8c42;padding:1px 4px;border-radius:3px}
+.perf-card.ready .perf-checkedby{opacity:1}
+.perf-stamp{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:9px;font-weight:900;color:#ff8c42;line-height:1}
+.perf-card.ready .perf-stamp{color:#ff8c42;opacity:1}
+.add-card{background:transparent;border:2px dashed #1a2e40;border-radius:12px;width:100px;height:80px;text-align:center;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#2a4050;font-size:24px;transition:all .2s}
+.add-card:hover{border-color:#38bdf8;color:#38bdf8}
+.del-prog{margin-top:8px;text-align:right}.del-prog span{font-size:10px;color:#2a4050;cursor:pointer;text-decoration:underline}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,10,20,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:9999}
+.modal-box{background:#0f1f2e;border-radius:16px;padding:28px;width:340px;border:1px solid #1e3a50;box-shadow:0 24px 64px rgba(0,20,40,.6);max-height:80vh;overflow-y:auto}
+.modal-box h3{margin:0 0 20px;color:#e0f0ff;font-size:18px;font-weight:700}
+.modal-box label{color:#7eaac4;font-size:12px;display:block;margin-bottom:4px}
+.modal-box input{width:100%;padding:8px 12px;background:#091520;border:1px solid #1e3a50;border-radius:8px;color:#e0f0ff;font-size:14px;outline:none;margin-bottom:14px}
+.modal-box input:focus{border-color:#2dd4a8}
+.modal-btns{display:flex;gap:10px;margin-top:6px}
+.modal-cancel{flex:1;padding:10px 0;background:#1a2e40;border:1px solid #1e3a50;border-radius:8px;color:#7eaac4;cursor:pointer;font-size:14px}
+.modal-save{flex:1;padding:10px 0;background:linear-gradient(135deg,#2dd4a8,#38bdf8);border:none;border-radius:8px;color:#091520;cursor:pointer;font-size:14px;font-weight:700}
+.color-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.color-dot{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent}.color-dot.active{border-color:#fff}
+.sync-badge{position:fixed;bottom:12px;right:16px;background:#0e1e2c;border:1px solid #1a2e40;border-radius:20px;padding:4px 12px;font-size:10px;color:#2dd4a8;display:flex;align-items:center;gap:6px;z-index:50}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#2dd4a8;animation:pulse 2s infinite}
+.sync-badge.offline{color:#f87171}.sync-badge.offline .sync-dot{background:#f87171}
+.loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px}
+.loading-spinner{width:32px;height:32px;border:3px solid #1a2e40;border-top-color:#2dd4a8;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app"><div class="loading-screen"><div class="loading-spinner"></div><div style="color:#38bdf8;font-size:14px">読み込み中...</div></div></div>
+<script>
+var FIREBASE_CONFIG={apiKey:"AIzaSyDLwYFggNB55ZWIenx8yn8uk-ljZCw5NzI",authDomain:"test-a5e1c.firebaseapp.com",databaseURL:"https://test-a5e1c-default-rtdb.firebaseio.com",projectId:"test-a5e1c",storageBucket:"test-a5e1c.firebasestorage.app",messagingSenderId:"743595443494",appId:"1:743595443494:web:a35b91f0d416a0cb31ade7",measurementId:"G-BZH97V3VQ0"};
+
+// ============================================================
+// ★★★ ここにイベントデータを貼り付けてください ★★★
+//
+// 【使い方】
+// 1. このテンプレートHTMLと案件のPDF/画像をClaudeに送る
+// 2. 「このテンプレートにデータを反映して」と依頼する
+// 3. Claudeがこの部分を案件データに差し替えたHTMLを生成します
+//
+// 【データ形式】
+// eventTitle: イベント名
+// programs: プログラム配列
+//   - id: 一意のID（s1, s2, ...）
+//   - name: "大カテゴリ / 小カテゴリ" の形式
+//   - honban: 本番時間（HH:MM）
+//   - standby: スタンバイ時間（HH:MM）※本番の20分前が基本
+//   - color: カテゴリ色
+//     #2dd4a8=OPENING/特別  #38bdf8=SHOW  #34d399=LIVE
+//     #60a5fa=SHOW系  #a78bfa=DJ  #22d3ee=SPECIAL SHOW
+//     #ff8c42=SPECIAL FASHION  #4ade80=MC/協賛
+//   - performers: 出演者配列
+//     id, num, name, ruby, role, ready, checkedBy, checkedAt,
+//     staffStamp, staffCheckedBy
+// ============================================================
+var INITIAL_DATA={"eventTitle": "GirlsAward 2026 S/S", "programs": [{"id": "s1", "name": "OPENING ACT① / ミクチャスペシャルステージ", "honban": "14:00", "standby": "", "color": "#2dd4a8", "performers": [{"id": "x1_1", "num": 1, "name": "すみぽん(高倉菫)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_2", "num": 2, "name": "山本紗彩", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_3", "num": 3, "name": "島津凛々華", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_4", "num": 4, "name": "きみか", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_5", "num": 5, "name": "芹沢ミユ", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_6", "num": 6, "name": "日浦彩良", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_7", "num": 7, "name": "海羽凜", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_8", "num": 8, "name": "望月しゅな", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_9", "num": 9, "name": "木村沙由里", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_10", "num": 10, "name": "もえぴ(MilMoon)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_11", "num": 11, "name": "希姫(きき)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x1_12", "num": 12, "name": "山﨑心", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s2", "name": "OPENING ACT② / VOKSY DAYS", "honban": "14:05", "standby": "", "color": "#2dd4a8", "performers": []}, {"id": "s3", "name": "OPENING ACT③ / RE-GE", "honban": "14:10", "standby": "", "color": "#2dd4a8", "performers": []}, {"id": "s4", "name": "SPECIAL FASHION SHOW① / MAX&Co.", "honban": "14:32", "standby": "", "color": "#ff8c42", "performers": [{"id": "x4_1", "num": 1, "name": "内村颯太", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_2", "num": 2, "name": "ヴァサイェガ渉", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_3", "num": 3, "name": "田村海琉", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_4", "num": 4, "name": "岩瀬洋志", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_5", "num": 5, "name": "RINON (ME:I)", "ruby": "", "role": "★2", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_6", "num": 6, "name": "SUZU (ME:I)", "ruby": "", "role": "★2", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_7", "num": 7, "name": "山﨑天 (櫻坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_8", "num": 8, "name": "王林", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_9", "num": 9, "name": "小川桜花 (Girls²)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_10", "num": 10, "name": "チャーはん 志村秀哉(超特急)・森次政裕(超特急)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_11", "num": 11, "name": "村田祐基 (超特急)", "ruby": "", "role": "★3", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_12", "num": 12, "name": "船津稜雅 (超特急)", "ruby": "", "role": "★3", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_13", "num": 13, "name": "NAOYA (MAZZEL)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_14", "num": 14, "name": "美海", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_15", "num": 15, "name": "矢吹奈子", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_16", "num": 16, "name": "山口綺羅 (Girls²)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_17", "num": 17, "name": "香音", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_18", "num": 18, "name": "葛西杏也菜", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_19", "num": 19, "name": "堀口真帆", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_20", "num": 20, "name": "小宮山莉渚", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_21", "num": 21, "name": "ブリッジマン遊七", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_22", "num": 22, "name": "土方エミリ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_23", "num": 23, "name": "藤井サチ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_24", "num": 24, "name": "ゆうちゃみ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_25", "num": 25, "name": "ファーストサマーウイカ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x4_26", "num": 26, "name": "井桁弘恵", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s5", "name": "1st LIVE PERFORMANCE / 乃木坂46", "honban": "14:43", "standby": "", "color": "#34d399", "performers": []}, {"id": "s6", "name": "MC", "honban": "14:58", "standby": "", "color": "#60a5fa", "performers": [{"id": "x6_1", "num": 1, "name": "山里亮太 (南海キャンディーズ)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x6_2", "num": 2, "name": "森香澄", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x6_3", "num": 3, "name": "長浜広奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x6_4", "num": 4, "name": "モンチッチちゃん", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x6_5", "num": 5, "name": "モンチッチくん", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s7", "name": "SPECIAL SHOW① / 映画『新劇場版☆ケロロ軍曹 復活して速攻地球滅亡の危機であります！』", "honban": "15:07", "standby": "", "color": "#22d3ee", "performers": [{"id": "x7_1", "num": 1, "name": "ケロロ軍曹", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x7_2", "num": 2, "name": "あの　※表記確認中", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x7_3", "num": 3, "name": "粗品", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s8", "name": "協賛ステージ① / DAISO & THREEPPY スペシャルコレクション", "honban": "15:17", "standby": "", "color": "#4ade80", "performers": [{"id": "x8_1", "num": 1, "name": "だいぞう", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x8_2", "num": 2, "name": "ゆうちゃみ", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x8_3", "num": 3, "name": "松本怜生", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x8_4", "num": 4, "name": "板野友美", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s9", "name": "協賛ステージ② / 楽天モバイルSPECIAL STAGE", "honban": "15:29", "standby": "", "color": "#4ade80", "performers": [{"id": "x9_1", "num": 1, "name": "なえなの", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x9_2", "num": 2, "name": "お買いものパンダ", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x9_3", "num": 3, "name": "松本怜生 カードブース", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s10", "name": "SPECIAL SHOW② / 映画『おそ松さん 人類クズ化計画!!!!!?』", "honban": "15:49", "standby": "", "color": "#22d3ee", "performers": [{"id": "x10_1", "num": 1, "name": "西村拓哉", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x10_2", "num": 2, "name": "小島健 (Aぇ! group)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x10_3", "num": 3, "name": "末澤誠也 (Aぇ! group)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x10_4", "num": 4, "name": "正門良規 (Aぇ! group)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x10_5", "num": 5, "name": "佐野晶哉 (Aぇ! group)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s11", "name": "1st SHOW / SLY", "honban": "16:01", "standby": "", "color": "#38bdf8", "performers": [{"id": "x11_1", "num": 1, "name": "なごみ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_2", "num": 2, "name": "安斉星来", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_3", "num": 3, "name": "雑賀サクラ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_4", "num": 4, "name": "黒瀬ひな", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_5", "num": 5, "name": "青島心", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_6", "num": 6, "name": "石川愛大", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_7", "num": 7, "name": "那須ほほみ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_8", "num": 8, "name": "海谷遠音", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_9", "num": 9, "name": "しゅう", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_10", "num": 10, "name": "有坂心花", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_11", "num": 11, "name": "今泉佑唯", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_12", "num": 12, "name": "田鍋梨々花", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x11_13", "num": 13, "name": "せいら", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s12", "name": "1st SHOW / Daniel Wellington", "honban": "16:01", "standby": "", "color": "#38bdf8", "performers": [{"id": "x12_1", "num": 1, "name": "生見愛瑠", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_2", "num": 2, "name": "もーりーしゅーと", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_3", "num": 3, "name": "よしあき", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_4", "num": 4, "name": "ミチ", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_5", "num": 5, "name": "板倉可奈 (CUTIE STREET)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_6", "num": 6, "name": "小林百合香", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_7", "num": 7, "name": "田村保乃 (櫻坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_8", "num": 8, "name": "堀越麗禾", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_9", "num": 9, "name": "一ノ瀬美空 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_10", "num": 10, "name": "加藤栞", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_11", "num": 11, "name": "金村美玖 (日向坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_12", "num": 12, "name": "小室安未", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_13", "num": 13, "name": "天翔天音", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_14", "num": 14, "name": "武田玲奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_15", "num": 15, "name": "水沢林太郎", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x12_16", "num": 16, "name": "井桁弘恵", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s13", "name": "1st SHOW / evelyn", "honban": "16:01", "standby": "", "color": "#38bdf8", "performers": [{"id": "x13_1", "num": 1, "name": "遠藤さくら (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_2", "num": 2, "name": "MINAMI", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_3", "num": 3, "name": "伊藤百花 (AKB48)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_4", "num": 4, "name": "水瀬さらら (Jams Collection)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_5", "num": 5, "name": "山本望叶", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_6", "num": 6, "name": "本田紗来", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_7", "num": 7, "name": "高比良由菜", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_8", "num": 8, "name": "江籠裕奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_9", "num": 9, "name": "早﨑すずき (僕が見たかった青空)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_10", "num": 10, "name": "金澤亜美 (僕が見たかった青空)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_11", "num": 11, "name": "白石乙華", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_12", "num": 12, "name": "綾瀬ことり (Rain Tree)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_13", "num": 13, "name": "小栗有以 (AKB48)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_14", "num": 14, "name": "鈴木瞳美 (≠ME)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_15", "num": 15, "name": "真鍋凪咲 (CUTIE STREET)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_16", "num": 16, "name": "津代美月 (Jams Collection)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x13_17", "num": 17, "name": "井上和 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s14", "name": "1st SHOW / WEGO", "honban": "16:01", "standby": "", "color": "#38bdf8", "performers": [{"id": "x14_1", "num": 1, "name": "野村康太", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_2", "num": 2, "name": "小川桜花 (Girls²)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_3", "num": 3, "name": "愛来", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_4", "num": 4, "name": "古園井寧々", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_5", "num": 5, "name": "上原彩有", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_6", "num": 6, "name": "杉本愛里", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_7", "num": 7, "name": "越山敬達", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_8", "num": 8, "name": "梶原叶渚", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_9", "num": 9, "name": "原莉子", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_10", "num": 10, "name": "堀口真帆", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_11", "num": 11, "name": "月島琉衣", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_12", "num": 12, "name": "鶴屋美咲 (Girls²)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_13", "num": 13, "name": "宇井優良梨 (GENIC)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_14", "num": 14, "name": "永瀬莉子", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x14_15", "num": 15, "name": "とうあ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s15", "name": "2nd LIVE PERFORMANCE / 超ときめき♡宣伝部", "honban": "16:25", "standby": "", "color": "#34d399", "performers": []}, {"id": "s16", "name": "協賛ステージ③ / GirlsAward ✕ 楽天市場コラボステージ", "honban": "16:35", "standby": "", "color": "#4ade80", "performers": [{"id": "x16_1", "num": 1, "name": "森愁斗(しゅーと)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x16_2", "num": 2, "name": "藤井サチ", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x16_3", "num": 3, "name": "森英寿(もーりー)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x16_4", "num": 4, "name": "ハリー杉山", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s17", "name": "協賛ステージ④ / BeRealスペシャルステージ", "honban": "16:47", "standby": "", "color": "#4ade80", "performers": [{"id": "x17_1", "num": 1, "name": "水瀬さらら (Jams Collection)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x17_2", "num": 2, "name": "津代美月 (Jams Collection)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x17_3", "num": 3, "name": "なごみ KINUJOブース", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s18", "name": "SPECIAL SHOW③ / テレビ朝日系オシドラサタデー『ターミネーターと恋しちゃったら』", "honban": "17:05", "standby": "", "color": "#22d3ee", "performers": [{"id": "x18_1", "num": 1, "name": "松倉海斗", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x18_2", "num": 2, "name": "矢吹奈子", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x18_3", "num": 3, "name": "佐藤江梨子", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s19", "name": "3th LIVE PERFORMANCE / 美麗-Bi-ray-", "honban": "17:15", "standby": "", "color": "#34d399", "performers": []}, {"id": "s20", "name": "SPECIAL FASHION SHOW② / atmos pink × adidas Originals SPECIAL STAGE", "honban": "17:20", "standby": "", "color": "#ff8c42", "performers": [{"id": "x20_1", "num": 1, "name": "山下美月", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_2", "num": 2, "name": "あの", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_3", "num": 3, "name": "安斉星来", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_4", "num": 4, "name": "NAOYA (MAZZEL)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_5", "num": 5, "name": "中川勝就 (OWV)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_6", "num": 6, "name": "浦野秀太 (OWV)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_7", "num": 7, "name": "藤吉夏鈴 (櫻坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_8", "num": 8, "name": "ミチ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_9", "num": 9, "name": "さくら", "ruby": "", "role": "★2", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_10", "num": 10, "name": "MINAMI", "ruby": "", "role": "★2", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_11", "num": 11, "name": "りんか", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_12", "num": 12, "name": "なえなの", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_13", "num": 13, "name": "王林", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x20_14", "num": 14, "name": "塩﨑太智 (M!LK)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s21", "name": "4rd LIVE PERFORMANCE / VIBY", "honban": "17:27", "standby": "", "color": "#34d399", "performers": []}, {"id": "s22", "name": "SPECIAL SHOW④ / ABEMA10周年「今日、好きになりました。」ガールズアワードスペシャルステージ", "honban": "17:34", "standby": "", "color": "#22d3ee", "performers": [{"id": "x22_1", "num": 1, "name": "今井暖大", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_2", "num": 2, "name": "時田音々", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_3", "num": 3, "name": "瀬川陽菜乃", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_4", "num": 4, "name": "紗和", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_5", "num": 5, "name": "長浜広奈", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_6", "num": 6, "name": "白石乙華", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_7", "num": 7, "name": "葛西杏也菜", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_8", "num": 8, "name": "小林ゆあ", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_9", "num": 9, "name": "岩間夕陽", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_10", "num": 10, "name": "倉澤俊", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_11", "num": 11, "name": "谷村優真", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_12", "num": 12, "name": "内田金吾", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_13", "num": 13, "name": "多田梨音", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_14", "num": 14, "name": "かす", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_15", "num": 15, "name": "中川大輔", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_16", "num": 16, "name": "大友花恋", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x22_17", "num": 17, "name": "井上裕介 (NON STYLE)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s23", "name": "5th LIVE PERFORMANCE / H//PE Princess", "honban": "17:52", "standby": "", "color": "#34d399", "performers": []}, {"id": "s24", "name": "協賛ステージ⑤ / いなばペットフード「ちゅ〜るテリーヌ」ステージ", "honban": "18:02", "standby": "", "color": "#4ade80", "performers": [{"id": "x24_1", "num": 1, "name": "坂井仁香 (超ときめき♡宣伝部)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x24_2", "num": 2, "name": "金澤亜美 (僕が見たかった青空)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x24_3", "num": 3, "name": "小栗有以(AKB48) カードブース", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s25", "name": "2nd SHOW / LAGUA GEM", "honban": "18:25", "standby": "", "color": "#38bdf8", "performers": [{"id": "x25_1", "num": 1, "name": "せいら", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_2", "num": 2, "name": "黒瀬ひな", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_3", "num": 3, "name": "山口綺羅 (Girls²)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_4", "num": 4, "name": "ブリッジマン遊七", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_5", "num": 5, "name": "濱岸ひより", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_6", "num": 6, "name": "鶴嶋乃愛", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_7", "num": 7, "name": "田仲埜愛", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_8", "num": 8, "name": "美海", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_9", "num": 9, "name": "村谷はるな", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_10", "num": 10, "name": "夏川メガン", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_11", "num": 11, "name": "加藤栞", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_12", "num": 12, "name": "野村康太", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_13", "num": 13, "name": "なごみ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x25_14", "num": 14, "name": "綱啓永", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s26", "name": "2nd SHOW / dazzlin", "honban": "18:25", "standby": "", "color": "#38bdf8", "performers": [{"id": "x26_1", "num": 1, "name": "小坂菜緒 (日向坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_2", "num": 2, "name": "伊藤百花 (AKB48)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_3", "num": 3, "name": "本田紗来", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_4", "num": 4, "name": "小川桜花 (Girls²)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_5", "num": 5, "name": "古園井寧々", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_6", "num": 6, "name": "三浦舞華", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_7", "num": 7, "name": "葛西杏也菜", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_8", "num": 8, "name": "梶原叶渚", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_9", "num": 9, "name": "山本望叶", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_10", "num": 10, "name": "谷崎早耶 (≠ME)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_11", "num": 11, "name": "小崎凜奈 (RoLuANGEL)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_12", "num": 12, "name": "堀口美澪 (RoLuANGEL)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_13", "num": 13, "name": "青島心", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_14", "num": 14, "name": "かとゆり", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_15", "num": 15, "name": "中川紅葉", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_16", "num": 16, "name": "平川そよ花", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_17", "num": 17, "name": "平田侑希 (AKB48)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x26_18", "num": 18, "name": "守屋麗奈 (櫻坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s27", "name": "2nd SHOW / MONO-MART", "honban": "18:25", "standby": "", "color": "#38bdf8", "performers": [{"id": "x27_1", "num": 1, "name": "板野友美", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_2", "num": 2, "name": "松本怜生", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_3", "num": 3, "name": "大野愛実 (日向坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_4", "num": 4, "name": "五百城茉央 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_5", "num": 5, "name": "大友花恋", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_6", "num": 6, "name": "マーシュ彩", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_7", "num": 7, "name": "佐藤和奏", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_8", "num": 8, "name": "中島瑠菜", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_9", "num": 9, "name": "平松想乃", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_10", "num": 10, "name": "藤岡真威人", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_11", "num": 11, "name": "大和奈央", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_12", "num": 12, "name": "もーりーしゅーと", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_13", "num": 13, "name": "真鍋凪咲 (CUTIE STREET)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_14", "num": 14, "name": "鈴木ゆうか", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_15", "num": 15, "name": "豊田裕大", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x27_16", "num": 16, "name": "ゆうちゃみ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s28", "name": "2nd SHOW / FREE'S MART", "honban": "18:25", "standby": "", "color": "#38bdf8", "performers": [{"id": "x28_1", "num": 1, "name": "生見愛瑠", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_2", "num": 2, "name": "田鍋梨々花", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_3", "num": 3, "name": "土方エミリ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_4", "num": 4, "name": "香音", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_5", "num": 5, "name": "紺野彩夏", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_6", "num": 6, "name": "小國舞羽", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_7", "num": 7, "name": "莉子", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_8", "num": 8, "name": "月丘音彩", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_9", "num": 9, "name": "秋田汐梨", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_10", "num": 10, "name": "星乃夢奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_11", "num": 11, "name": "川口葵", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_12", "num": 12, "name": "川口ゆりな", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_13", "num": 13, "name": "雑賀サクラ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_14", "num": 14, "name": "小室安未", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x28_15", "num": 15, "name": "山﨑天 (櫻坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s29", "name": "協賛ステージ⑥ / 「フレイアクリニック×CANDY TUNE」Special Stage", "honban": "18:52", "standby": "", "color": "#4ade80", "performers": []}, {"id": "s30", "name": "協賛ステージ⑦ / ザバス Shape&Beauty ”キレイ、みちる。” SPECIAL STAGE", "honban": "19:03", "standby": "", "color": "#4ade80", "performers": [{"id": "x30_1", "num": 1, "name": "ミチ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x30_2", "num": 2, "name": "青木源太", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s31", "name": "6th LIVE PERFORMANCE / GPP", "honban": "19:11", "standby": "", "color": "#34d399", "performers": []}, {"id": "s32", "name": "3rd SHOW / Top of the Hill", "honban": "19:21", "standby": "", "color": "#38bdf8", "performers": [{"id": "x32_1", "num": 1, "name": "山下美月", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_2", "num": 2, "name": "長浜広奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_3", "num": 3, "name": "よしあき", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_4", "num": 4, "name": "MINAMI", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_5", "num": 5, "name": "内田金吾", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_6", "num": 6, "name": "山口綺羅 (Girls²)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_7", "num": 7, "name": "有坂心花", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_8", "num": 8, "name": "こーくん", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_9", "num": 9, "name": "髙橋快空", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_10", "num": 10, "name": "近藤華", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_11", "num": 11, "name": "小國舞羽", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_12", "num": 12, "name": "愛来", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_13", "num": 13, "name": "星乃夢奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_14", "num": 14, "name": "樋口幸平", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_15", "num": 15, "name": "月山京香", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_16", "num": 16, "name": "高尾颯斗", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_17", "num": 17, "name": "葛西杏也菜", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_18", "num": 18, "name": "福山絢水", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_19", "num": 19, "name": "ゆい小池(ゆいちゃみ)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_20", "num": 20, "name": "美海", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x32_21", "num": 21, "name": "河合郁人", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s33", "name": "3rd SHOW / GRAPEFRUIT MOON", "honban": "19:21", "standby": "", "color": "#38bdf8", "performers": [{"id": "x33_1", "num": 1, "name": "遠藤さくら (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_2", "num": 2, "name": "小川史記 (BUDDiiS)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_3", "num": 3, "name": "松本怜生", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_4", "num": 4, "name": "川﨑桜 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_5", "num": 5, "name": "永瀬莉子", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_6", "num": 6, "name": "草川直弥", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_7", "num": 7, "name": "小林由依", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_8", "num": 8, "name": "多田梨音", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_9", "num": 9, "name": "野月まひる (CampusAward 2026 グランプリ)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_10", "num": 10, "name": "新倉れな (CampusAward 2026 GirlsAward賞)", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_11", "num": 11, "name": "板倉可奈 (CUTIE STREET)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_12", "num": 12, "name": "浦野秀太 (OWV)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_13", "num": 13, "name": "三原羽衣", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_14", "num": 14, "name": "那須ほほみ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_15", "num": 15, "name": "奥野壮", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_16", "num": 16, "name": "堀川梨心", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_17", "num": 17, "name": "さくら", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_18", "num": 18, "name": "審良ふたば", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_19", "num": 19, "name": "宇井優良梨 (GENIC)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_20", "num": 20, "name": "鶴屋美咲 (Girls²)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_21", "num": 21, "name": "的野美青 (櫻坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x33_22", "num": 22, "name": "とうあ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s34", "name": "7th LIVE PERFORMANCE / ME:I", "honban": "19:38", "standby": "", "color": "#34d399", "performers": [{"id": "x34_1", "num": 1, "name": "CANDY TUNE フレイアブース", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s35", "name": "SPECIAL FASHION SHOW③ / SPECIAL FASHION SHOW MEN’S NON-NO Special Stage", "honban": "20:03", "standby": "", "color": "#ff8c42", "performers": [{"id": "x35_1", "num": 1, "name": "豊田裕大", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_2", "num": 2, "name": "四坂亮翔", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_3", "num": 3, "name": "鈴鹿央士", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_4", "num": 4, "name": "嵐翔真", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_5", "num": 5, "name": "樋之津琳太郎", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_6", "num": 6, "name": "高橋璃央", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_7", "num": 7, "name": "髙橋大翔", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_8", "num": 8, "name": "石川愛大", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_9", "num": 9, "name": "鈴木仁", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_10", "num": 10, "name": "髙橋紅輝", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_11", "num": 11, "name": "松井大奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_12", "num": 12, "name": "野村康太", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_13", "num": 13, "name": "水沢林太郎", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_14", "num": 14, "name": "栄莉弥", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_15", "num": 15, "name": "鈴々木響", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_16", "num": 16, "name": "松岡光", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_17", "num": 17, "name": "籠宮壮太朗", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_18", "num": 18, "name": "海谷遠音", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_19", "num": 19, "name": "小方蒼介", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_20", "num": 20, "name": "中田圭祐", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x35_21", "num": 21, "name": "中川大輔", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s36", "name": "8th LIVE PERFORMANCE / MAZZEL", "honban": "20:17", "standby": "", "color": "#34d399", "performers": []}, {"id": "s37", "name": "SPECIAL SHOW⑤ / フジテレビ系月9ドラマ『サバ缶、宇宙へ行く』", "honban": "20:32", "standby": "", "color": "#22d3ee", "performers": [{"id": "x37_1", "num": 1, "name": "出口夏希", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x37_2", "num": 2, "name": "黒崎煌代", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x37_3", "num": 3, "name": "ゆめぽて", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x37_4", "num": 4, "name": "西本まりん", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x37_5", "num": 5, "name": "山下永玖", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x37_6", "num": 6, "name": "夏目透羽", "ruby": "", "role": "★1", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x37_7", "num": 7, "name": "北村匠海", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s38", "name": "4th SHOW / Án MILLE", "honban": "20:42", "standby": "", "color": "#38bdf8", "performers": [{"id": "x38_1", "num": 1, "name": "井上和 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_2", "num": 2, "name": "南なつ (CANDY TUNE)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_3", "num": 3, "name": "天翔愛", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_4", "num": 4, "name": "筒井あやめ (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_5", "num": 5, "name": "鈴木ゆうか", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_6", "num": 6, "name": "向井怜衣", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_7", "num": 7, "name": "川﨑桜 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_8", "num": 8, "name": "大峰ユリホ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_9", "num": 9, "name": "林芽亜里", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_10", "num": 10, "name": "平田侑希 (AKB48)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_11", "num": 11, "name": "水瀬さらら (Jams Collection)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_12", "num": 12, "name": "金川紗耶 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_13", "num": 13, "name": "マーシュ彩", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_14", "num": 14, "name": "小林由依", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_15", "num": 15, "name": "入江美沙希", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_16", "num": 16, "name": "紺野彩夏", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x38_17", "num": 17, "name": "小坂菜緒 (日向坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s39", "name": "4th SHOW / rienda", "honban": "20:42", "standby": "", "color": "#38bdf8", "performers": [{"id": "x39_1", "num": 1, "name": "森香澄", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_2", "num": 2, "name": "長浜広奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_3", "num": 3, "name": "立花琴未 (CANDY TUNE)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_4", "num": 4, "name": "鈴木瞳美 (≠ME)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_5", "num": 5, "name": "坂井仁香 (超ときめき♡宣伝部)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_6", "num": 6, "name": "菅田愛貴 (超ときめき♡宣伝部)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_7", "num": 7, "name": "小崎凜奈 (RoLuANGEL)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_8", "num": 8, "name": "石川満里奈", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_9", "num": 9, "name": "小栗有以 (AKB48)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_10", "num": 10, "name": "伊藤百花 (AKB48)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_11", "num": 11, "name": "津代美月 (Jams Collection)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_12", "num": 12, "name": "天翔天音", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_13", "num": 13, "name": "平川そよ花", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_14", "num": 14, "name": "村上なずな", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_15", "num": 15, "name": "三原羽衣", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_16", "num": 16, "name": "一ノ瀬美空 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_17", "num": 17, "name": "藤井サチ", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}, {"id": "x39_18", "num": 18, "name": "梅澤美波 (乃木坂46)", "ruby": "", "role": "", "ready": false, "checkedBy": "", "checkedAt": "", "staffStamp": "", "staffCheckedBy": ""}]}, {"id": "s40", "name": "9th LIVE PERFORMANCE / 超特急", "honban": "20:58", "standby": "", "color": "#34d399", "performers": []}]};
+
+var data=JSON.parse(JSON.stringify(INITIAL_DATA));
+var search='',timeOffset=0,editPerf=null,editPerfProgId=null,editProg=null;
+var dbRef=null,isOnline=false,dragSrc=null,dragOverId=null,ignoreNextUpdate=false;
+var currentUser='',currentRole='',showLogin=true,selectedRole='staff',forceLoginRender=false;
+var selectedProgramId='';
+
+
+// グループ別カラーパレット
+var GROUP_COLOR_RED='#e53935';
+var GROUP_COLOR_BLUE='#1e88e5';
+function getGroupColor(role){
+  if(!role||role.indexOf('★')<0)return null;
+  var num=parseInt(role.replace('★',''))||1;
+  return num%2===1?GROUP_COLOR_RED:GROUP_COLOR_BLUE;
+}
+function can(a){if(currentRole==='host')return true;if(currentRole==='director')return['toggle','edit','time','start','search'].indexOf(a)>=0;if(currentRole==='staff')return a==='stafftap'||a==='search';return false;}
+function getSavedNames(){try{return JSON.parse(localStorage.getItem('sb-names')||'[]');}catch(e){return[];}}
+function saveUserName(n){var a=getSavedNames().filter(function(x){return x.name!==n.name||x.role!==n.role;});a.unshift(n);if(a.length>8)a=a.slice(0,8);localStorage.setItem('sb-names',JSON.stringify(a));}
+var sess=null;try{sess=JSON.parse(sessionStorage.getItem('sb-session'));}catch(e){}
+if(sess&&sess.name&&sess.role){currentUser=sess.name;currentRole=sess.role;showLogin=false;}
+function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function nowTimeStr(){var n=new Date();return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+
+// 編集モード切り替え
+var editMode=false;
+function toggleEditMode(){editMode=!editMode;render();}
+
+window.addEventListener('load',function(){
+  try{
+    if(typeof firebase==='undefined'){document.getElementById('app').innerHTML='<div class="loading-screen"><div style="color:#f87171">Firebase SDK読み込み失敗</div></div>';return;}
+    firebase.initializeApp(FIREBASE_CONFIG);var db=firebase.database();dbRef=db.ref('standby-ga2026ss');
+    dbRef.on('value',function(s){if(ignoreNextUpdate){ignoreNextUpdate=false;return;}var v=s.val();if(v){data=v;fillMissingStandby();render();}});
+    db.ref('.info/connected').on('value',function(s){isOnline=s.val()===true;render();});
+    dbRef.once('value').then(function(s){if(!s.val()){dbRef.set(data);}else{data=s.val();fillMissingStandby();}render();});
+    setInterval(render,1000);
+  }catch(e){document.getElementById('app').innerHTML='<div class="loading-screen"><div style="color:#f87171">エラー: '+e.message+'</div></div>';}
+});
+function saveData(){ignoreNextUpdate=true;if(dbRef)dbRef.set(data);}
+
+function fillMissingStandby(){
+  var changed=false;
+  if(!data.programs)return;
+  data.programs.forEach(function(p){
+    if(!p.standby&&p.honban){
+      var parts=p.honban.split(':');
+      var total=parseInt(parts[0])*60+parseInt(parts[1])-20;
+      if(total<0)total=0;
+      p.standby=String(Math.floor(total/60)).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
+      changed=true;
+    }
+  });
+  if(changed)saveData();
+}
+
+function render(){
+  var app=document.getElementById('app'),h='';
+  if(showLogin){
+    if(!forceLoginRender&&(document.getElementById('nameInput')||document.getElementById('passInput')))return;
+    forceLoginRender=false;
+    // Hide search bar during login
+    var sb=document.getElementById('searchBar');if(sb)sb.style.display='none';
+    var savedName='';var el0=document.getElementById('nameInput');if(el0)savedName=el0.value;
+    var saved=getSavedNames();
+    h+='<div class="login-screen"><div class="login-box">';
+    h+='<h1>スタンバイ管理</h1><p>名前と役割を選択してください</p>';
+    h+='<input id="nameInput" placeholder="名前を入力" autofocus onkeydown="if(event.key===\'Enter\'){if(selectedRole!==\'staff\'){var pe=document.getElementById(\'passInput\');if(pe)pe.focus();}else{submitLogin();}}">';
+    h+='<div class="role-select">';
+    h+='<div class="role-card'+(selectedRole==='host'?' active':'')+'" onclick="selectRole(\'host\')"><div class="role-icon">👑</div><div class="role-name">ホスト</div><div class="role-desc">全機能</div></div>';
+    h+='<div class="role-card'+(selectedRole==='director'?' active':'')+'" onclick="selectRole(\'director\')"><div class="role-icon">🎬</div><div class="role-name">ディレクター</div><div class="role-desc">編集・ON/OFF<br>時間変更</div></div>';
+    h+='<div class="role-card'+(selectedRole==='staff'?' active':'')+'" onclick="selectRole(\'staff\')"><div class="role-icon">📋</div><div class="role-name">スタッフ</div><div class="role-desc">移動時刻の記録</div></div>';
+    h+='</div>';
+    if(selectedRole==='host'||selectedRole==='director'){h+='<input id="passInput" type="password" placeholder="パスワードを入力" style="margin-bottom:8px" onkeydown="if(event.key===\'Enter\')submitLogin()">';}
+    h+='<div id="loginError" style="color:#f87171;font-size:12px;margin-bottom:10px;min-height:16px"></div>';
+    h+='<button class="login-submit" onclick="submitLogin()">開始する</button>';
+    if(saved.length>0){h+='<div class="login-history">最近のログイン：<br>';saved.forEach(function(s){var ic=s.role==='host'?'👑':s.role==='director'?'🎬':'📋';h+='<span onclick="quickLogin(\''+esc(s.name)+'\',\''+s.role+'\')">'+ic+' '+esc(s.name)+'</span>';});h+='</div>';}
+    h+='</div></div>';
+    app.innerHTML=h;setTimeout(function(){var el=document.getElementById('nameInput');if(el){if(savedName)el.value=savedName;el.focus();}},50);return;
+  }
+
+  // Main content — ensure search bar exists as persistent DOM
+  var searchBar=document.getElementById('searchBar');
+  if(!searchBar){
+    // First time after login: build the shell
+    app.innerHTML='<div id="searchBar" style="padding:0 16px 12px;background:#091520;"><div class="search-row" style="padding-bottom:0"><div class="search-wrap"><span class="search-icon">&#x1F50D;</span><input class="search-input" id="searchInput" placeholder="名前で検索..."></div></div></div><div id="mainContent"></div>';
+    initSearchInput();
+    searchBar=document.getElementById('searchBar');
+  }
+  searchBar.style.display='block';
+
+  var mainContent=document.getElementById('mainContent');
+  if(!mainContent){mainContent=document.createElement('div');mainContent.id='mainContent';app.appendChild(mainContent);}
+
+  var now=new Date();
+  var timeStr=now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+
+  // Show all programs (including user-added ones)
+  var allProgs=data.programs||[];
+
+  // timeOffset: +means "pushing" (honban delayed, more time), -means "ahead" (less time)
+  function parseTime(t){if(!t)return new Date(0);var p=t.split(':');var d=new Date(now);d.setHours(parseInt(p[0]),parseInt(p[1]),0,0);return d;}
+  function parseTimeWithOffset(t){if(!t)return new Date(0);var p=t.split(':');var d=new Date(now);d.setHours(parseInt(p[0]),parseInt(p[1]),0,0);d.setMinutes(d.getMinutes()+timeOffset);return d;}
+  function getCountdownInfo(){
+    var targetProg=null;
+    if(selectedProgramId){
+      targetProg=allProgs.find(function(p){return p.id===selectedProgramId;});
+    }
+    if(!targetProg){
+      var nextTime=null;
+      for(var i=0;i<allProgs.length;i++){
+        var ht=parseTimeWithOffset(allProgs[i].honban);
+        if(ht>now&&(!nextTime||ht<nextTime)){nextTime=ht;targetProg=allProgs[i];}
+      }
+    }
+    if(!targetProg)return{time:'00:00',name:'',passed:true};
+    var ht=parseTimeWithOffset(targetProg.honban);
+    var diff=Math.max(0,Math.floor((ht-now)/1000));
+    var mm=String(Math.floor(diff/60)).padStart(2,'0');
+    var ss=String(diff%60).padStart(2,'0');
+    return{time:mm+':'+ss,name:targetProg.name.split(' / ')[0],passed:ht<=now};
+  }
+
+  var q=search.toLowerCase();
+  var filtered=allProgs.filter(function(p){if(!q)return true;if(p.name.toLowerCase().indexOf(q)>=0)return true;return p.performers&&p.performers.some(function(a){return a.name.toLowerCase().indexOf(q)>=0||(a.ruby&&a.ruby.toLowerCase().indexOf(q)>=0);});});
+  var roleIcon=currentRole==='host'?'👑':currentRole==='director'?'🎬':'📋';
+  var roleBadgeClass='user-badge '+(currentRole==='host'?'role-badge-host':currentRole==='director'?'role-badge-director':'role-badge-staff');
+  var isStaff=currentRole==='staff';
+
+  // Save timeline scroll position
+  var tlEl=document.querySelector('.timeline');
+  var tlScroll=tlEl?tlEl.scrollLeft:0;
+
+  var cdInfo=getCountdownInfo();
+
+  h+='<div class="tl-bar">';
+  // Countdown bar — fixed with timeline
+  h+='<div class="countdown-bar" style="display:flex;align-items:center;justify-content:center;gap:10px;position:relative">';
+  h+='<div style="flex:1;text-align:center">';
+  if(cdInfo.name){h+='<span style="font-size:10px;color:#7eaac4;margin-right:8px">'+esc(cdInfo.name)+'</span>';}
+  h+='<span class="countdown-text">'+(cdInfo.passed?'本番済':'本番まで '+cdInfo.time)+'</span>';
+  h+='</div>';
+  if(can('edit')){
+    h+='<div onclick="toggleEditMode()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid '+(editMode?'#ff8c42':'#1e3a50')+';background:'+(editMode?'#ff8c4230':'#0e1e2c')+';color:'+(editMode?'#ff8c42':'#5a8090')+'">✏️ '+(editMode?'編集中':'編集')+'</div>';
+  }
+  h+='</div>';
+  h+='<div class="timeline" id="timelineScroll">';
+  for(var i=0;i<allProgs.length;i++){var p=allProgs[i];var pf=p.performers||[];var t=pf.length,d2=0;for(var j=0;j<pf.length;j++){if(pf[j].ready)d2++;}var r=t-d2;
+    var isSel=selectedProgramId===p.id;
+    h+='<div class="tl-item'+(r===0&&t>0?' done':'')+(isSel?' selected':'')+'" onclick="selectProgram(\''+p.id+'\')">';
+    h+='<div class="tl-time">'+esc(p.honban)+'</div><div class="tl-name">'+esc(p.name.split(' / ')[0])+'</div>';
+    if(t>0)h+='<div class="tl-count"><span class="c-rem">未'+r+'</span><span class="c-sep">／</span><span class="c-done">済'+d2+'</span></div>';
+    h+='</div>';}
+  h+='</div></div>';
+
+  h+='<div class="header"><div class="title-row"><div class="title-left">';
+  h+='<span class="event-title">'+esc(data.eventTitle)+'</span>';
+  h+='<span class="'+roleBadgeClass+'" onclick="changeLogin()">'+roleIcon+' '+esc(currentUser)+'</span>';
+  h+='</div><div class="clock"><div class="clock-time">'+timeStr+'</div>';
+  h+='<div class="clock-label">現在時刻'+(timeOffset?'（'+(timeOffset>0?timeOffset+'分押し':Math.abs(timeOffset)+'分巻き')+'）':'')+'</div></div></div>';
+
+  if(can('time')){h+='<div class="offset-row"><span class="offset-label">時間調整：</span>';[-10,-5,0,5,10,15,20,25,30].forEach(function(v){var label=v===0?'オンタイム':(v>0?'+'+v+'押し':Math.abs(v)+'巻き');h+='<button class="offset-btn'+(timeOffset===v?' active':'')+'" onclick="timeOffset='+v+';render();">'+label+'</button>';});h+='</div>';}
+
+  if(currentRole==='host'){h+='<div style="display:flex;gap:8px;margin-bottom:10px">';
+  h+='<button class="ctrl-btn reset" onclick="resetAll()" style="font-size:11px;padding:5px 10px">全チェック解除</button>';
+  h+='<button class="ctrl-btn add" onclick="addProgram()" style="font-size:11px;padding:5px 10px">＋ プログラム追加</button>';
+  h+='<button class="ctrl-btn" onclick="resetToInitial()" style="font-size:11px;padding:5px 10px;color:#ff8c42">初期データに戻す</button>';
+  h+='</div>';}
+
+  h+='</div>';
+
+  h+='<div style="padding:0 16px">';
+  for(var pi=0;pi<filtered.length;pi++){
+    var prog=filtered[pi];var perfs=prog.performers||[];var total=perfs.length,done=0;for(var j=0;j<perfs.length;j++){if(perfs[j].ready)done++;}var rem=total-done;
+    h+='<div class="program" id="prog-'+prog.id+'"'+(can('edit')?' ondragover="event.preventDefault()" ondrop="handleDropOnProg(\''+prog.id+'\',event)"':'')+'>';
+    h+='<div class="prog-header"><div class="prog-left">';
+    h+='<div class="prog-bar" style="background:linear-gradient(180deg,'+prog.color+','+prog.color+'88)"></div>';
+    h+='<div><div class="prog-name" style="color:'+prog.color+(can('edit')?';cursor:pointer':'')+'"'+(editMode&&can('edit')?' onclick="openEditProg(\''+prog.id+'\')"':'')+'>'+esc(prog.name)+(editMode&&can('edit')?' ✏️':'')+'</div>';
+    var sbDisplay=prog.standby||'--:--';
+    if(can('time')){
+      h+='<div class="prog-time">本番 '+esc(prog.honban)+' / <span onclick="editSbTime(\''+prog.id+'\')" style="cursor:pointer;color:#2dd4a8;text-decoration:underline">SB '+esc(sbDisplay)+'</span></div>';
+    }else{
+      h+='<div class="prog-time">本番 '+esc(prog.honban)+' / SB '+esc(sbDisplay)+'</div>';
+    }
+    h+='</div></div>';
+    h+='<div class="prog-right">';
+    if(can('start')&&total>0){h+='<button class="start-btn" style="border-color:'+prog.color+'50;color:'+prog.color+'" onclick="startAll(\''+prog.id+'\')">▶ スタート</button>';}
+    if(total>0)h+='<span class="prog-count"><span class="c-rem" style="font-weight:600">未'+rem+'</span> <span class="c-done" style="font-weight:600">済'+done+'</span></span>';
+    h+='</div></div>';
+
+    if(total>0){
+    h+='<div class="perf-grid">';
+    for(var k=0;k<perfs.length;k++){
+      var perf=perfs[k];
+      var isMatch=q&&(perf.name.toLowerCase().indexOf(q)>=0||(perf.ruby&&perf.ruby.toLowerCase().indexOf(q)>=0));
+      var dim=q&&!isMatch?'0.25':'1';
+      var rb=perf.ready?'#b0c0cc':prog.color+'20';
+      var rc=perf.ready?'#6a7a8a':prog.color;
+      var cc='perf-card';if(perf.ready)cc+=' ready';if(dragOverId===perf.id)cc+=' drag-over';
+      if(editMode&&can('edit'))cc+=' edit-mode';
+      var clickAction='';
+      if(editMode&&can('edit')){
+        clickAction=' onclick="openEditPerf(\''+prog.id+'\',\''+perf.id+'\')"';
+      }else if(isStaff){clickAction=' onclick="staffTap(\''+prog.id+'\',\''+perf.id+'\')"';}
+      else if(can('toggle')){clickAction=' onclick="togglePerf(\''+prog.id+'\',\''+perf.id+'\')"';}
+      h+='<div style="opacity:'+dim+';transition:opacity .2s">';
+      h+='<div class="'+cc+'"';
+      if(can('edit')&&!editMode)h+=' draggable="true" ondragstart="onDragStart(event,\''+perf.id+'\',\''+prog.id+'\')" ondragover="event.preventDefault();onDragOver(\''+perf.id+'\')" ondrop="event.preventDefault();event.stopPropagation();onDrop(\''+perf.id+'\',\''+prog.id+'\')"';
+      h+=clickAction;
+      h+='>';
+      if(can('edit')&&!editMode)h+='<div class="perf-grip">⠿</div>';
+      if(editMode&&can('edit'))h+='<div style="position:absolute;top:2px;right:4px;font-size:10px;">✏️</div>';
+      h+='<div class="perf-num"><span>'+perf.num+'</span>';
+      if(perf.role){var gc=getGroupColor(perf.role);if(gc){h+='<span class="perf-role" style="background:'+gc+';color:#fff;font-size:8px">'+esc(perf.role)+'</span>';}else{h+='<span class="perf-role" style="background:'+rb+';color:'+rc+'">'+esc(perf.role)+'</span>';}}
+      h+='</div>';
+      h+='<div class="perf-name">'+esc(perf.name)+'</div>';
+      if(perf.ruby)h+='<div class="perf-ruby">'+esc(perf.ruby)+'</div>';
+      if(perf.ready){if(perf.checkedBy)h+='<div class="perf-check">'+esc(perf.checkedBy)+'</div>';}
+      if(perf.staffStamp){
+        h+='<div class="perf-stamp">移動 '+esc(perf.staffStamp)+'</div>';
+        if(perf.staffCheckedBy)h+='<div class="perf-checkedby">'+esc(perf.staffCheckedBy)+'</div>';
+      }
+      h+='</div></div>';
+    }
+    if(can('edit'))h+='<div class="add-card" onclick="addPerformer(\''+prog.id+'\')">＋</div>';
+    h+='</div>';}
+    else if(can('edit')){h+='<div class="perf-grid"><div class="add-card" onclick="addPerformer(\''+prog.id+'\')">＋</div></div>';}
+    if(can('edit'))h+='<div class="del-prog"><span onclick="delProgram(\''+prog.id+'\')">プログラム削除</span></div>';
+    h+='</div>';
+  }
+  h+='</div>';
+  h+='<div class="sync-badge'+(isOnline?'':' offline')+'"><div class="sync-dot"></div>'+(isOnline?'リアルタイム同期中':'オフライン')+'</div>';
+
+  mainContent.innerHTML=h;
+  // Restore timeline scroll position
+  var tlEl2=document.getElementById('timelineScroll');
+  if(tlEl2&&tlScroll)tlEl2.scrollLeft=tlScroll;
+
+  // Render modals to separate container (not affected by timer re-render)
+  var modalContainer=document.getElementById('modalContainer');
+  if(!modalContainer){modalContainer=document.createElement('div');modalContainer.id='modalContainer';document.body.appendChild(modalContainer);}
+  var mh='';
+  if(editPerf){
+    mh+='<div class="modal-overlay" onclick="closeModals()"><div class="modal-box" onclick="event.stopPropagation()">';
+    mh+='<h3>出演者編集</h3>';
+    mh+='<label>番号</label><input type="number" id="eNum" value="'+editPerf.num+'">';
+    mh+='<label>名前</label><input id="eName" value="'+esc(editPerf.name)+'">';
+    mh+='<label>ふりがな</label><input id="eRuby" value="'+esc(editPerf.ruby)+'">';
+    mh+='<label>役割</label><input id="eRole" value="'+esc(editPerf.role)+'">';
+    mh+='<div style="margin-top:8px;text-align:right"><span style="font-size:11px;color:#f87171;cursor:pointer;text-decoration:underline" onclick="delPerformer()">削除</span></div>';
+    mh+='<div class="modal-btns"><button class="modal-cancel" onclick="closeModals()">キャンセル</button><button class="modal-save" onclick="saveEditPerf()">保存</button></div>';
+    mh+='</div></div>';
+  }
+  if(editProg){
+    mh+='<div class="modal-overlay" onclick="closeModals()"><div class="modal-box" style="width:380px" onclick="event.stopPropagation()">';
+    mh+='<h3>プログラム編集</h3>';
+    mh+='<label>プログラム名</label><input id="epName" value="'+esc(editProg.name)+'">';
+    mh+='<label>本番時間</label><input id="epHonban" value="'+esc(editProg.honban)+'">';
+    mh+='<label>スタンバイ時間</label><input id="epStandby" value="'+esc(editProg.standby)+'">';
+    mh+='<label>カラー</label><div class="color-row">';
+    ['#2dd4a8','#34d399','#38bdf8','#60a5fa','#22d3ee','#06b6d4','#4ade80','#a78bfa','#ff8c42'].forEach(function(c){mh+='<div class="color-dot'+(editProg.color===c?' active':'')+'" style="background:'+c+'" onclick="editProg.color=\''+c+'\';renderModals();"></div>';});
+    mh+='</div>';
+    mh+='<div class="modal-btns"><button class="modal-cancel" onclick="closeModals()">キャンセル</button><button class="modal-save" onclick="saveEditProg()">保存</button></div>';
+    mh+='</div></div>';
+  }
+  // Only update modal container if modal state changed (not during typing)
+  if(!editPerf&&!editProg){modalContainer.innerHTML='';}
+  else if(!document.querySelector('#modalContainer .modal-overlay')){modalContainer.innerHTML=mh;}
+}
+
+// ★★★ ログインパスワード設定（案件ごとに変更） ★★★
+var ROLE_PASS={host:'4141',director:'0000'};
+function selectRole(r){selectedRole=r;forceLoginRender=true;render();}
+function submitLogin(){var el=document.getElementById('nameInput');var name=el?el.value.trim():'';if(!name){showLoginErr('名前を入力してください');return;}if(selectedRole==='host'||selectedRole==='director'){var pel=document.getElementById('passInput');var pass=pel?pel.value:'';if(pass!==ROLE_PASS[selectedRole]){showLoginErr('パスワードが正しくありません');return;}}currentUser=name;currentRole=selectedRole;showLogin=false;saveUserName({name:name,role:selectedRole});sessionStorage.setItem('sb-session',JSON.stringify({name:name,role:selectedRole}));render();}
+function showLoginErr(msg){var el=document.getElementById('loginError');if(el)el.textContent=msg;}
+function quickLogin(name,role){if(role==='host'||role==='director'){selectedRole=role;showLogin=true;forceLoginRender=true;render();setTimeout(function(){var el=document.getElementById('nameInput');if(el)el.value=name;},60);return;}currentUser=name;currentRole=role;showLogin=false;saveUserName({name:name,role:role});sessionStorage.setItem('sb-session',JSON.stringify({name:name,role:role}));render();}
+function changeLogin(){showLogin=true;selectedRole=currentRole;forceLoginRender=true;render();}
+
+var searchTimer=null;
+// Search input is persistent DOM element — set up listener once after load
+function initSearchInput(){
+  var el=document.getElementById('searchInput');
+  if(!el)return;
+  var composing=false;
+  el.addEventListener('compositionstart',function(){composing=true;});
+  el.addEventListener('compositionend',function(){
+    composing=false;
+    search=el.value;
+    render();
+  });
+  el.addEventListener('input',function(){
+    if(composing)return;
+    search=el.value;
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(render,200);
+  });
+}
+
+function editSbTime(pid){
+  if(!can('time'))return;
+  var prog=data.programs.find(function(p){return p.id===pid;});
+  if(!prog)return;
+  var newSb=prompt('スタンバイ時間を入力（例: 14:30）',prog.standby||'');
+  if(newSb===null)return;
+  if(!/^\d{1,2}:\d{2}$/.test(newSb)){alert('HH:MM形式で入力してください');return;}
+  prog.standby=newSb;
+  saveData();render();
+}
+
+function togglePerf(pid,aid){var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var perf=prog.performers.find(function(a){return a.id===aid;});if(!perf)return;perf.ready=!perf.ready;if(perf.ready){perf.checkedBy=currentUser;perf.checkedAt=nowTimeStr();}else{perf.checkedBy='';perf.checkedAt='';}saveData();render();}
+function staffTap(pid,aid){var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var perf=prog.performers.find(function(a){return a.id===aid;});if(!perf)return;if(perf.staffStamp){perf.staffStamp='';perf.staffCheckedBy='';}else{perf.staffStamp=nowTimeStr();perf.staffCheckedBy=currentUser;}saveData();render();}
+function startAll(pid){if(!can('start'))return;var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var ts=nowTimeStr();prog.performers.forEach(function(a){a.ready=true;a.checkedBy=currentUser;a.checkedAt=ts;});saveData();render();}
+function resetAll(){if(!can('edit'))return;data.programs.forEach(function(p){if(p.performers)p.performers.forEach(function(a){a.ready=false;a.checkedBy='';a.checkedAt='';a.staffStamp='';a.staffCheckedBy='';});});saveData();render();}
+function addPerformer(pid){if(!can('edit'))return;var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;if(!prog.performers)prog.performers=[];prog.performers.push({id:'n'+Date.now(),num:prog.performers.length+1,name:'新規',ruby:'',role:'',ready:false,checkedBy:'',checkedAt:'',staffStamp:''});saveData();render();}
+function addProgram(){
+  if(currentRole!=='host')return;
+  var name=prompt('プログラム名を入力（例: SPECIAL SHOW / ゲスト名）');
+  if(!name)return;
+  var honban=prompt('本番時間を入力（例: 15:30）','00:00');
+  if(!honban)return;
+  if(!/^\d{1,2}:\d{2}$/.test(honban)){alert('HH:MM形式で入力してください');return;}
+  var colorChoices=['#2dd4a8','#38bdf8','#34d399','#22d3ee','#4ade80','#ff8c42','#a78bfa','#60a5fa'];
+  var colorLabels=['OPENING','SHOW','LIVE','SP SHOW','協賛','SP FASHION','DJ','MC'];
+  var colorMsg='カラーを番号で選択：\n';
+  for(var ci=0;ci<colorChoices.length;ci++){colorMsg+=(ci+1)+'. '+colorLabels[ci]+'\n';}
+  var colorIdx=parseInt(prompt(colorMsg,'2'))-1;
+  if(isNaN(colorIdx)||colorIdx<0||colorIdx>=colorChoices.length)colorIdx=1;
+  var newId='s'+Date.now();
+  var newProg={id:newId,name:name,honban:honban,standby:'',color:colorChoices[colorIdx],performers:[]};
+  // Insert in chronological order using minutes comparison
+  function toMin(t){var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
+  var newMin=toMin(honban);
+  var inserted=false;
+  for(var i=0;i<data.programs.length;i++){
+    if(toMin(data.programs[i].honban)>newMin){data.programs.splice(i,0,newProg);inserted=true;break;}
+  }
+  if(!inserted)data.programs.push(newProg);
+  fillMissingStandby();
+  saveData();render();
+  setTimeout(function(){scrollToProg(newId);},100);
+}
+function resetToInitial(){if(!can('edit'))return;if(!confirm('全データを初期状態に戻しますか？'))return;data=JSON.parse(JSON.stringify(INITIAL_DATA));saveData();render();}
+function delProgram(pid){if(!can('edit'))return;var prog=data.programs.find(function(p){return p.id===pid;});if(!prog||!confirm('「'+prog.name+'」を削除？'))return;data.programs=data.programs.filter(function(p){return p.id!==pid;});saveData();render();}
+function delPerformer(){if(!can('edit')||!editPerf||!editPerfProgId)return;if(!confirm('「'+editPerf.name+'」を削除？'))return;var prog=data.programs.find(function(p){return p.id===editPerfProgId;});if(!prog)return;prog.performers=prog.performers.filter(function(a){return a.id!==editPerf.id;});prog.performers.forEach(function(a,i){a.num=i+1;});editPerf=null;editPerfProgId=null;saveData();render();}
+function scrollToProg(pid){var el=document.getElementById('prog-'+pid);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function selectProgram(pid){selectedProgramId=(selectedProgramId===pid)?'':pid;render();scrollToProg(pid);}
+function openEditPerf(pid,aid){if(!can('edit'))return;var prog=data.programs.find(function(p){return p.id===pid;});editPerf=JSON.parse(JSON.stringify(prog.performers.find(function(a){return a.id===aid;})));editPerfProgId=pid;render();}
+function openEditProg(pid){if(!can('edit'))return;editProg=JSON.parse(JSON.stringify(data.programs.find(function(p){return p.id===pid;})));render();}
+function closeModals(){editPerf=null;editPerfProgId=null;editProg=null;var mc=document.getElementById('modalContainer');if(mc)mc.innerHTML='';render();}
+function renderModals(){var mc=document.getElementById('modalContainer');if(!mc)return;mc.innerHTML='';render();}
+function saveEditPerf(){var prog=data.programs.find(function(p){return p.id===editPerfProgId;});var perf=prog.performers.find(function(a){return a.id===editPerf.id;});perf.num=parseInt(document.getElementById('eNum').value)||0;perf.name=document.getElementById('eName').value;perf.ruby=document.getElementById('eRuby').value;perf.role=document.getElementById('eRole').value;editPerf=null;editPerfProgId=null;saveData();render();}
+function saveEditProg(){var prog=data.programs.find(function(p){return p.id===editProg.id;});prog.name=document.getElementById('epName').value;prog.honban=document.getElementById('epHonban').value;prog.standby=document.getElementById('epStandby').value;prog.color=editProg.color;editProg=null;saveData();render();}
+function onDragStart(e,perfId,progId){if(!can('edit'))return;dragSrc={perfId:perfId,progId:progId};e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','');}
+function onDragOver(perfId){if(dragOverId!==perfId){dragOverId=perfId;render();}}
+function onDrop(perfId,progId){if(!dragSrc||!can('edit'))return;var srcId=dragSrc.perfId,srcProg=dragSrc.progId;if(srcProg===progId){var p=data.programs.find(function(x){return x.id===progId;});var si=p.performers.findIndex(function(a){return a.id===srcId;});var ti=p.performers.findIndex(function(a){return a.id===perfId;});if(si===-1||ti===-1)return;var m=p.performers.splice(si,1)[0];p.performers.splice(ti,0,m);p.performers.forEach(function(a,i){a.num=i+1;});}else{var sp=data.programs.find(function(x){return x.id===srcProg;});var tp=data.programs.find(function(x){return x.id===progId;});var si2=sp.performers.findIndex(function(a){return a.id===srcId;});var ti2=tp.performers.findIndex(function(a){return a.id===perfId;});if(si2===-1)return;var m2=sp.performers.splice(si2,1)[0];tp.performers.splice(ti2===-1?tp.performers.length:ti2,0,m2);sp.performers.forEach(function(a,i){a.num=i+1;});tp.performers.forEach(function(a,i){a.num=i+1;});}dragSrc=null;dragOverId=null;saveData();render();}
+function handleDropOnProg(pid,e){e.preventDefault();if(!dragSrc||!can('edit')||dragSrc.progId===pid)return;var sp=data.programs.find(function(x){return x.id===dragSrc.progId;});var tp=data.programs.find(function(x){return x.id===pid;});var si=sp.performers.findIndex(function(a){return a.id===dragSrc.perfId;});if(si===-1)return;var m=sp.performers.splice(si,1)[0];m.num=tp.performers.length+1;tp.performers.push(m);sp.performers.forEach(function(a,i){a.num=i+1;});dragSrc=null;dragOverId=null;saveData();render();}
+</script>
+</body>
+</html>
