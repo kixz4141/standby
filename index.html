@@ -338,7 +338,7 @@ function render(){
     h+='<div><div class="prog-name" style="color:'+prog.color+(can('edit')?';cursor:pointer':'')+'"'+(editMode&&can('edit')?' onclick="openEditProg(\''+prog.id+'\')"':'')+'>'+esc(prog.name)+(editMode&&can('edit')?' ✏️':'')+'</div>';
     var sbDisplay=prog.standby||'--:--';
     if(can('time')){
-      h+='<div class="prog-time">本番 '+esc(prog.honban)+' / <span onclick="editSbTime(\''+prog.id+'\')" style="cursor:pointer;color:#2dd4a8;text-decoration:underline">SB '+esc(sbDisplay)+'</span></div>';
+      h+='<div class="prog-time">本番 <span onclick="editHonbanTime(\''+prog.id+'\')" style="cursor:pointer;color:#2dd4a8;text-decoration:underline">'+esc(prog.honban)+'</span> / <span onclick="editSbTime(\''+prog.id+'\')" style="cursor:pointer;color:#2dd4a8;text-decoration:underline">SB '+esc(sbDisplay)+'</span></div>';
     }else{
       h+='<div class="prog-time">本番 '+esc(prog.honban)+' / SB '+esc(sbDisplay)+'</div>';
     }
@@ -466,6 +466,17 @@ function editSbTime(pid){
   if(newSb===null)return;
   if(!/^\d{1,2}:\d{2}$/.test(newSb)){alert('HH:MM形式で入力してください');return;}
   prog.standby=newSb;
+  saveData();render();
+}
+
+function editHonbanTime(pid){
+  if(!can('time'))return;
+  var prog=data.programs.find(function(p){return p.id===pid;});
+  if(!prog)return;
+  var newHonban=prompt('本番時間を入力（例: 14:30）',prog.honban||'');
+  if(newHonban===null)return;
+  if(!/^\d{1,2}:\d{2}$/.test(newHonban)){alert('HH:MM形式で入力してください');return;}
+  prog.honban=newHonban;
   saveData();render();
 }
 
