@@ -73,6 +73,9 @@ body{font-family:'Noto Sans JP','Hiragino Sans',sans-serif;background:linear-gra
 .perf-card.drag-over{border:2px dashed #38bdf8}
 .perf-card.edit-mode{border-color:#ff8c42;box-shadow:0 0 0 1px #ff8c4260}
 .perf-card.bordered{border:3px solid #c62828!important;box-shadow:0 0 0 1px #c6282840}
+.perf-card.koshitsu{background:#a7f3d0!important}
+.perf-card.koshitsu .perf-name{color:#1a1a2a}
+.perf-card.koshitsu .perf-num{color:#1a1a2a}
 .perf-card[draggable="true"]{cursor:grab}
 .perf-grip{font-size:8px;color:#bcc8d0;letter-spacing:2px;margin-bottom:2px;line-height:1}
 .perf-num{font-size:11px;font-weight:700;margin-bottom:3px;display:flex;justify-content:center;gap:4px;align-items:center;color:#1a1a2a}
@@ -168,23 +171,22 @@ function toggleEditMode(){editMode=!editMode;render();}
 // ふりがなマッピング（一度だけFirebaseデータに反映）
 var FURIGANA_MAP={"愛来":"あいら","青島心":"あおしまこころ","秋田汐梨":"あきたしおり","審良ふたば":"あきらふたば","綾瀬ことり(Rain Tree)":"あやせことり","有坂心花":"ありさかこはな","安斉星来":"あんざいせいら","石川愛大":"いしかわまなひろ","石川満里奈":"いしかわまりな","伊藤百花(AKB48)":"いとうももか","今泉佑唯":"いまいずみゆい","入江美沙希":"いりえみさき","宇井優良梨(GENIC)":"ういゆらり","上原彩有":"うえはらさあり","内田金吾":"うちだきんご","浦野秀太(OWV)":"うらのしゅうた","江籠裕奈":"えごゆうな","大友花恋":"おおともかれん","小川桜花(Girls²)":"おがわようか","小國舞羽":"おぐにまう","小栗有以(AKB48)":"おぐりゆい","小崎凜奈(RoLuANGEL)":"おざきりんな","海谷遠音":"かいやとおね","葛西杏也菜":"かさいあやな","梶原叶渚":"かじわらかんな","加藤栞":"かとうしおり","かとゆり":"かとゆり","金澤亜美(僕が見たかった青空)":"かなざわあみ","川口ゆりな":"かわぐちゆりな","草川直弥":"くさかわなおや","黒瀬ひな":"くろせひな","古園井寧々":"こぞのいねね","小林百合香":"こばやしゆりか","小宮山莉渚":"こみやまりな","小室安未":"こむろあみ","近藤華":"こんどうはな","紺野彩夏":"こんのあやか","さくら":"さくら","佐藤和奏":"さとうわかな","しゅう":"しゅう","白石乙華":"しらいしおとは","杉本愛里":"すぎもとあいり","鈴木瞳美(≠ME)":"すずきひとみ","鈴木ゆうか":"すずきゆうか","高尾颯斗":"たかおはやと","髙橋快空":"たかはしかいら","高比良由菜":"たかひらゆな","多田梨音":"ただりのん","田仲埜愛":"たなかのあ","田鍋梨々花":"たなべりりか","谷崎早耶(≠ME)":"たにざきさや","月丘音彩":"つきおかねいろ","月島琉衣":"つきしまるい","月山京香":"つきやまきょうか","津代美月(Jams Collection)":"つしろみづき","鶴嶋乃愛":"つるしまのあ","鶴屋美咲(Girls²)":"つるやみさき","天翔愛":"てんしょうあい","天翔天音":"てんしょうあまね","豊田裕大":"とよだゆうだい","中川勝就(OWV)":"なかがわかつなり","中川紅葉":"なかがわくれは","中島瑠菜":"なかしまるな","那須ほほみ":"なすほほみ","夏川メガン":"なつかわめがん","野村康太":"のむらこうた","早﨑すずき(僕が見たかった青空)":"はやさきすずき","原莉子":"はらりこ","土方エミリ":"ひじかたえみり","平川そよ花":"ひらかわそよか","平田侑希(AKB48)":"ひらたゆき","平松想乃":"ひらまつその","福山絢水":"ふくやまあやみ","藤岡真威人":"ふじおかまいと","ブリッジマン遊七":"ぶりっじまんゆな","星乃夢奈":"ほしのゆな","堀川梨心":"ほりかわりこ","堀口真帆":"ほりぐちまほ","堀口美澪(RoLuANGEL)":"ほりぐちみれい","堀越麗禾":"ほりこしれいか","本田紗来":"ほんださら","マーシュ彩":"まーしゅあや","松本怜生":"まつもとれお","三浦舞華":"みうらまいか","水瀬さらら(Jams Collection)":"みなせさらら","MINAMI":"みなみ","三原羽衣":"みはらうい","美海":"みみ","村上愛花":"むらかみえりか","村上なずな":"むらかみなずな","村谷はるな":"むらたにはるな","矢吹奈子":"やぶきなこ","山口綺羅(Girls²)":"やまぐちきら","大和奈央":"やまとなお","山本望叶":"やまもとみかな","ゆい小池(ゆいちゃみ)":"ゆいこいけ(ゆいちゃみ)","莉子":"りこ","りんか":"りんか","板野友美":"いたのともみ","ゆうちゃみ":"ゆうちゃみ","なえなの":"なえなの","ミチ":"みち","しゅーと(もーりーしゅーと)":"しゅーと","ハリー杉山":"はりーすぎやま","藤井サチ":"ふじいさち","もーりー(もーりーしゅーと)":"もーりー","井桁弘恵":"いげたひろえ","岩瀬洋志":"いわせようじ","王林":"おうりん","香音":"かのん","ファーストサマーウイカ":"ふぁーすとさまーういか","板倉可奈(CUTIE STREET)":"いたくらかな","雑賀サクラ":"さいがさくら","せいら":"せいら","武田玲奈":"たけだれな","とうあ":"とうあ","永瀬莉子":"ながせりこ","なごみ":"なごみ","生見愛瑠":"ぬくみめる","真鍋凪咲(CUTIE STREET)":"まなべなぎさ","水沢林太郎":"みずさわりんたろう","よしあき":"よしあき","山下美月":"やましたみづき","濱岸ひより":"はまぎしひより","綱啓永":"つなけいと","川口葵":"かわぐちあおい","奥野壮":"おくのそう","こーくん":"こーくん","小林由依":"こばやしゆい","樋口幸平":"ひぐちこうへい","小川史記(BUDDiiS)":"おがわふみのり","青木源太":"あおきげんた","大峰ユリホ":"おおみねゆりほ","林芽亜里":"はやしめあり","向井怜衣":"むかいれい","嵐翔真":"あらししょうま","栄莉弥":"えりや","小方蒼介":"おがたそうすけ","籠宮壮太朗":"こみやそうたろう","四坂亮翔":"しさかりょうと","鈴鹿央士":"すずかおうじ","鈴木仁":"すずきじん","鈴々木響":"すずきひびき","髙橋紅輝":"たかはしこうき","髙橋大翔":"たかはしひろと","高橋璃央":"たかはしりお","中川大輔":"なかがわだいすけ","中田圭祐":"なかたけいすけ","樋之津琳太郎":"ひのつりんたろう","松井大奈":"まついだいな","松岡光":"まつおかひかる","NAOYA(MAZZEL)":"なおや","南なつ(CANDY TUNE)":"みなみなつ","立花琴未(CANDY TUNE)":"たちばなことみ","越山敬達":"こしやまけいたつ","森香澄":"もりかすみ","山﨑天(櫻坂46)":"やまさきてん","SUZU(ME:I)":"すず","RINON(ME:I)":"りのん","村田祐基(超特急)":"むらたゆうき","船津稜雅(超特急)":"ふなつりょうが","山里亮太(南海キャンディーズ)":"やまさとりょうた","長浜広奈":"ながはまひな","金村美玖(日向坂46)":"かねむらみく","田村保乃(櫻坂46)":"たむらほの","藤吉夏鈴(櫻坂46)":"ふじよしかりん","守屋麗奈(櫻坂46)":"もりやれな","小坂菜緒(日向坂46)":"こさかなお","大野愛実(日向坂46)":"おおのまなみ","的野美青(櫻坂46)":"まとのみお","井上和(乃木坂46)":"いのうえなぎ","一ノ瀬美空(乃木坂46)":"いちのせみく","遠藤さくら(乃木坂46)":"えんどうさくら","金川紗耶(乃木坂46)":"かながわさや","五百城茉央(乃木坂46)":"いおきまお","川﨑桜(乃木坂46)":"かわさきさくら","筒井あやめ(乃木坂46)":"つついあやめ","梅澤美波(乃木坂46)":"うめざわみなみ","坂井仁香(超ときめき♡宣伝部)":"さかいひとか","菅田愛貴(超ときめき♡宣伝部)":"すだあき","松倉海斗":"まつくらかいと","佐藤江梨子":"さとうえりこ","新倉れな(CampusAward 2026 GirlsAward賞)":"にいくられな","野月まひる(CampusAward 2026 グランプリ)":"のずきまひる","海羽凜":"かいねりん","希姫(きき)":"きき","きみか":"きみか","木村沙由里":"きむらさゆり","島津凛々華":"しまづりりか","すみぽん(高倉菫)":"すみぽん","芹沢ミユ":"せりざわみゆ","日浦彩良":"ひうらさら","もえぴ(MilMoon)":"もえぴ","望月しゅな":"もちづきしゅな","山﨑心":"やまさきこころ","山本紗彩":"やまもとさあや","もーりーしゅーと":"もーりーしゅーと","森愁斗(しゅーと)":"しゅーと","森英寿(もーりー)":"もーりー","塩﨑太智(M!LK)":"しおざきだいち"};
 function applyFurigana(){
-  var changed=false;
+  var updates={};
   if(!data.programs)return false;
-  data.programs.forEach(function(p){
+  data.programs.forEach(function(p,pi){
     if(!p.performers)return;
-    p.performers.forEach(function(pf){
-      if(pf.ruby)return;// 既にふりがながあればスキップ
+    p.performers.forEach(function(pf,ki){
+      if(pf.ruby)return;
       var name=pf.name;
-      // 完全一致
-      if(FURIGANA_MAP[name]){pf.ruby=FURIGANA_MAP[name];changed=true;return;}
-      // スペース除去して一致
-      var clean=name.replace(/\s/g,'');
-      for(var k in FURIGANA_MAP){if(k.replace(/\s/g,'')===clean){pf.ruby=FURIGANA_MAP[k];changed=true;return;}}
-      // 部分一致
-      for(var k in FURIGANA_MAP){if(k.indexOf(name)>=0||name.indexOf(k)>=0){pf.ruby=FURIGANA_MAP[k];changed=true;return;}}
+      var ruby=null;
+      if(FURIGANA_MAP[name]){ruby=FURIGANA_MAP[name];}
+      else{var clean=name.replace(/\s/g,'');for(var k in FURIGANA_MAP){if(k.replace(/\s/g,'')===clean){ruby=FURIGANA_MAP[k];break;}}}
+      if(!ruby){for(var k in FURIGANA_MAP){if(k.indexOf(name)>=0||name.indexOf(k)>=0){ruby=FURIGANA_MAP[k];break;}}}
+      if(ruby){pf.ruby=ruby;updates['programs/'+pi+'/performers/'+ki+'/ruby']=ruby;}
     });
   });
-  return changed;
+  if(Object.keys(updates).length>0){ignoreNextUpdate=true;if(dbRef)dbRef.update(updates);return true;}
+  return false;
 }
 
 window.addEventListener('load',function(){
@@ -193,25 +195,46 @@ window.addEventListener('load',function(){
     firebase.initializeApp(FIREBASE_CONFIG);var db=firebase.database();dbRef=db.ref('standby-ga2026ss');
     dbRef.on('value',function(s){if(ignoreNextUpdate){ignoreNextUpdate=false;return;}var v=s.val();if(v){data=v;fillMissingStandby();render();}});
     db.ref('.info/connected').on('value',function(s){isOnline=s.val()===true;render();});
-    dbRef.once('value').then(function(s){if(!s.val()){dbRef.set(data);}else{data=s.val();fillMissingStandby();}if(applyFurigana()){saveData();}render();});
+    dbRef.once('value').then(function(s){if(!s.val()){dbRef.set(data);}else{data=s.val();fillMissingStandby();}applyFurigana();render();});
     setInterval(render,1000);
   }catch(e){document.getElementById('app').innerHTML='<div class="loading-screen"><div style="color:#f87171">エラー: '+e.message+'</div></div>';}
 });
 function saveData(){ignoreNextUpdate=true;if(dbRef)dbRef.set(data);}
 
+// 部分更新用ヘルパー（該当パスのみFirebaseに書き込む）
+function findProgIndex(pid){if(!data.programs)return -1;for(var i=0;i<data.programs.length;i++){if(data.programs[i].id===pid)return i;}return -1;}
+function findPerfIndex(prog,aid){if(!prog||!prog.performers)return -1;for(var i=0;i<prog.performers.length;i++){if(prog.performers[i].id===aid)return i;}return -1;}
+function savePerfField(pid,aid,fields){
+  var pi=findProgIndex(pid);if(pi===-1)return;
+  var prog=data.programs[pi];var ki=findPerfIndex(prog,aid);if(ki===-1)return;
+  var updates={};
+  for(var f in fields){updates['programs/'+pi+'/performers/'+ki+'/'+f]=fields[f];}
+  ignoreNextUpdate=true;if(dbRef)dbRef.update(updates);
+}
+function saveProgField(pid,fields){
+  var pi=findProgIndex(pid);if(pi===-1)return;
+  var updates={};
+  for(var f in fields){updates['programs/'+pi+'/'+f]=fields[f];}
+  ignoreNextUpdate=true;if(dbRef)dbRef.update(updates);
+}
+function saveProgPerformers(pid){
+  var pi=findProgIndex(pid);if(pi===-1)return;
+  ignoreNextUpdate=true;if(dbRef)dbRef.child('programs/'+pi+'/performers').set(data.programs[pi].performers);
+}
+
 function fillMissingStandby(){
-  var changed=false;
   if(!data.programs)return;
-  data.programs.forEach(function(p){
+  var updates={};
+  data.programs.forEach(function(p,i){
     if(!p.standby&&p.honban){
       var parts=p.honban.split(':');
       var total=parseInt(parts[0])*60+parseInt(parts[1])-20;
       if(total<0)total=0;
       p.standby=String(Math.floor(total/60)).padStart(2,'0')+':'+String(total%60).padStart(2,'0');
-      changed=true;
+      updates['programs/'+i+'/standby']=p.standby;
     }
   });
-  if(changed)saveData();
+  if(Object.keys(updates).length>0){ignoreNextUpdate=true;if(dbRef)dbRef.update(updates);}
 }
 
 function render(){
@@ -357,6 +380,7 @@ function render(){
       var rb=perf.ready?'#b0c0cc':prog.color+'20';
       var rc=perf.ready?'#6a7a8a':prog.color;
       var cc='perf-card';if(perf.ready)cc+=' ready';if(dragOverId===perf.id)cc+=' drag-over';if(perf.bordered)cc+=' bordered';
+      var cardStyle='';if(perf.koshitsu&&!perf.ready)cardStyle='background:#a7f3d0;';
       if(editMode&&can('edit'))cc+=' edit-mode';
       var clickAction='';
       if(editMode&&can('edit')){
@@ -364,7 +388,7 @@ function render(){
       }else if(isStaff){clickAction=' onclick="staffTap(\''+prog.id+'\',\''+perf.id+'\')"';}
       else if(can('toggle')){clickAction=' onclick="togglePerf(\''+prog.id+'\',\''+perf.id+'\')"';}
       h+='<div style="opacity:'+dim+';transition:opacity .2s">';
-      h+='<div class="'+cc+'"';
+      h+='<div class="'+cc+'"'+(cardStyle?' style="'+cardStyle+'"':'');
       if(can('edit')&&!editMode)h+=' draggable="true" ondragstart="onDragStart(event,\''+perf.id+'\',\''+prog.id+'\')" ondragover="event.preventDefault();onDragOver(\''+perf.id+'\')" ondrop="event.preventDefault();event.stopPropagation();onDrop(\''+perf.id+'\',\''+prog.id+'\')"';
       h+=clickAction;
       h+='>';
@@ -372,8 +396,9 @@ function render(){
       if(perf.bordered)h+='<div style="position:absolute;bottom:2px;right:4px"><span class="perf-role" style="background:#c62828;color:#fff;font-size:8px">早替</span></div>';
       if(perf.keep)h+='<div style="position:absolute;bottom:2px;left:4px"><span class="perf-role" style="background:#1565c0;color:#fff;font-size:8px">KEEP</span></div>';
       h+='<div class="perf-num">';
+      if(perf.pairGroup){var pgc=perf.pairGroup%2===1?GROUP_COLOR_RED:GROUP_COLOR_BLUE;h+='<span class="perf-role" style="background:'+pgc+';color:#fff;font-size:8px">'+perf.pairGroup+'</span>';}
       h+='<span>'+perf.num+'</span>';
-      if(perf.role){var gc=getGroupColor(perf.role);if(gc){h+='<span class="perf-role" style="background:'+gc+';color:#fff;font-size:8px">'+esc(perf.role)+'</span>';}else{h+='<span class="perf-role" style="background:'+rb+';color:'+rc+'">'+esc(perf.role)+'</span>';}}
+      if(perf.role){h+='<span class="perf-role" style="background:'+rb+';color:'+rc+'">'+esc(perf.role)+'</span>';}
       h+='</div>';
       h+='<div class="perf-name">'+esc(perf.name)+'</div>';
       if(perf.ruby)h+='<div class="perf-ruby">'+esc(perf.ruby)+'</div>';
@@ -409,8 +434,16 @@ function render(){
     mh+='<label>名前</label><input id="eName" value="'+esc(editPerf.name)+'">';
     mh+='<label>ふりがな</label><input id="eRuby" value="'+esc(editPerf.ruby)+'">';
     mh+='<label>役割</label><input id="eRole" value="'+esc(editPerf.role)+'">';
-    mh+='<label>早替え</label><div style="display:flex;gap:10px;margin-bottom:14px"><button id="eBorderOn" onclick="editPerf.bordered=true;document.getElementById(\'eBorderOn\').style.background=\'#c62828\';document.getElementById(\'eBorderOn\').style.color=\'#fff\';document.getElementById(\'eBorderOff\').style.background=\'#0e1e2c\';document.getElementById(\'eBorderOff\').style.color=\'#7eaac4\'" style="flex:1;padding:8px;border-radius:8px;border:1px solid #c62828;cursor:pointer;font-size:13px;font-weight:700;background:'+(editPerf.bordered?'#c62828':'#0e1e2c')+';color:'+(editPerf.bordered?'#fff':'#7eaac4')+'">ON</button><button id="eBorderOff" onclick="editPerf.bordered=false;document.getElementById(\'eBorderOff\').style.background=\'#1e3a50\';document.getElementById(\'eBorderOff\').style.color=\'#fff\';document.getElementById(\'eBorderOn\').style.background=\'#0e1e2c\';document.getElementById(\'eBorderOn\').style.color=\'#7eaac4\'" style="flex:1;padding:8px;border-radius:8px;border:1px solid #1e3a50;cursor:pointer;font-size:13px;font-weight:700;background:'+(!editPerf.bordered?'#1e3a50':'#0e1e2c')+';color:'+(!editPerf.bordered?'#fff':'#7eaac4')+'">OFF</button></div>';
-    mh+='<label>KEEP</label><div style="display:flex;gap:10px;margin-bottom:14px"><button id="eKeepOn" onclick="editPerf.keep=true;document.getElementById(\'eKeepOn\').style.background=\'#1565c0\';document.getElementById(\'eKeepOn\').style.color=\'#fff\';document.getElementById(\'eKeepOff\').style.background=\'#0e1e2c\';document.getElementById(\'eKeepOff\').style.color=\'#7eaac4\'" style="flex:1;padding:8px;border-radius:8px;border:1px solid #1565c0;cursor:pointer;font-size:13px;font-weight:700;background:'+(editPerf.keep?'#1565c0':'#0e1e2c')+';color:'+(editPerf.keep?'#fff':'#7eaac4')+'">ON</button><button id="eKeepOff" onclick="editPerf.keep=false;document.getElementById(\'eKeepOff\').style.background=\'#1e3a50\';document.getElementById(\'eKeepOff\').style.color=\'#fff\';document.getElementById(\'eKeepOn\').style.background=\'#0e1e2c\';document.getElementById(\'eKeepOn\').style.color=\'#7eaac4\'" style="flex:1;padding:8px;border-radius:8px;border:1px solid #1e3a50;cursor:pointer;font-size:13px;font-weight:700;background:'+(!editPerf.keep?'#1e3a50':'#0e1e2c')+';color:'+(!editPerf.keep?'#fff':'#7eaac4')+'">OFF</button></div>';
+    mh+='<label>ペア番号（同じ番号＝同じペア）</label><input type="number" id="ePairGroup" value="'+(editPerf.pairGroup||0)+'" min="0" placeholder="0=なし">';
+    mh+='<label style="margin-top:10px;margin-bottom:6px">オプション</label>';
+    mh+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+    // 早替え toggle
+    mh+='<button onclick="editPerf.bordered=!editPerf.bordered;renderModals();" style="padding:10px 8px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;border:1px solid '+(editPerf.bordered?'#c62828':'#1e3a50')+';background:'+(editPerf.bordered?'#c62828':'#0e1e2c')+';color:'+(editPerf.bordered?'#fff':'#7eaac4')+'">早替え '+(editPerf.bordered?'ON':'OFF')+'</button>';
+    // KEEP toggle
+    mh+='<button onclick="editPerf.keep=!editPerf.keep;renderModals();" style="padding:10px 8px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;border:1px solid '+(editPerf.keep?'#1565c0':'#1e3a50')+';background:'+(editPerf.keep?'#1565c0':'#0e1e2c')+';color:'+(editPerf.keep?'#fff':'#7eaac4')+'">KEEP '+(editPerf.keep?'ON':'OFF')+'</button>';
+    // 個室 toggle
+    mh+='<button onclick="editPerf.koshitsu=!editPerf.koshitsu;renderModals();" style="padding:10px 8px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;border:1px solid '+(editPerf.koshitsu?'#c2185b':'#1e3a50')+';background:'+(editPerf.koshitsu?'#c2185b':'#0e1e2c')+';color:'+(editPerf.koshitsu?'#fff':'#7eaac4')+'">個室 '+(editPerf.koshitsu?'ON':'OFF')+'</button>';
+    mh+='</div>';
     mh+='<div style="margin-top:8px;text-align:right"><span style="font-size:11px;color:#f87171;cursor:pointer;text-decoration:underline" onclick="delPerformer()">削除</span></div>';
     mh+='<div class="modal-btns"><button class="modal-cancel" onclick="closeModals()">キャンセル</button><button class="modal-save" onclick="saveEditPerf()">保存</button></div>';
     mh+='</div></div>';
@@ -427,7 +460,7 @@ function render(){
     mh+='<div class="modal-btns"><button class="modal-cancel" onclick="closeModals()">キャンセル</button><button class="modal-save" onclick="saveEditProg()">保存</button></div>';
     mh+='</div></div>';
   }
-  // Only update modal container if modal state changed (not during typing)
+  // Update modal container — only insert if modal is not already showing (prevents timer overwriting inputs)
   if(!editPerf&&!editProg){modalContainer.innerHTML='';}
   else if(!document.querySelector('#modalContainer .modal-overlay')){modalContainer.innerHTML=mh;}
 }
@@ -468,7 +501,7 @@ function editSbTime(pid){
   if(newSb===null)return;
   if(!/^\d{1,2}:\d{2}$/.test(newSb)){alert('HH:MM形式で入力してください');return;}
   prog.standby=newSb;
-  saveData();render();
+  saveProgField(pid,{standby:newSb});render();
 }
 
 function editHonbanTime(pid){
@@ -479,14 +512,14 @@ function editHonbanTime(pid){
   if(newHonban===null)return;
   if(!/^\d{1,2}:\d{2}$/.test(newHonban)){alert('HH:MM形式で入力してください');return;}
   prog.honban=newHonban;
-  saveData();render();
+  saveProgField(pid,{honban:newHonban});render();
 }
 
-function togglePerf(pid,aid){var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var perf=prog.performers.find(function(a){return a.id===aid;});if(!perf)return;perf.ready=!perf.ready;if(perf.ready){perf.checkedBy=currentUser;perf.checkedAt=nowTimeStr();}else{perf.checkedBy='';perf.checkedAt='';}saveData();render();}
-function staffTap(pid,aid){var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var perf=prog.performers.find(function(a){return a.id===aid;});if(!perf)return;if(perf.staffStamp){perf.staffStamp='';perf.staffCheckedBy='';}else{perf.staffStamp=nowTimeStr();perf.staffCheckedBy=currentUser;}saveData();render();}
-function startAll(pid){if(!can('start'))return;var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var ts=nowTimeStr();prog.performers.forEach(function(a){a.ready=true;a.checkedBy=currentUser;a.checkedAt=ts;});saveData();render();}
+function togglePerf(pid,aid){var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var perf=prog.performers.find(function(a){return a.id===aid;});if(!perf)return;perf.ready=!perf.ready;if(perf.ready){perf.checkedBy=currentUser;perf.checkedAt=nowTimeStr();}else{perf.checkedBy='';perf.checkedAt='';}savePerfField(pid,aid,{ready:perf.ready,checkedBy:perf.checkedBy,checkedAt:perf.checkedAt});render();}
+function staffTap(pid,aid){var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var perf=prog.performers.find(function(a){return a.id===aid;});if(!perf)return;if(perf.staffStamp){perf.staffStamp='';perf.staffCheckedBy='';}else{perf.staffStamp=nowTimeStr();perf.staffCheckedBy=currentUser;}savePerfField(pid,aid,{staffStamp:perf.staffStamp,staffCheckedBy:perf.staffCheckedBy});render();}
+function startAll(pid){if(!can('start'))return;var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;var ts=nowTimeStr();prog.performers.forEach(function(a){a.ready=true;a.checkedBy=currentUser;a.checkedAt=ts;});saveProgPerformers(pid);render();}
 function resetAll(){if(!can('edit'))return;data.programs.forEach(function(p){if(p.performers)p.performers.forEach(function(a){a.ready=false;a.checkedBy='';a.checkedAt='';a.staffStamp='';a.staffCheckedBy='';});});saveData();render();}
-function addPerformer(pid){if(!can('edit'))return;var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;if(!prog.performers)prog.performers=[];prog.performers.push({id:'n'+Date.now(),num:prog.performers.length+1,name:'新規',ruby:'',role:'',ready:false,checkedBy:'',checkedAt:'',staffStamp:''});saveData();render();}
+function addPerformer(pid){if(!can('edit'))return;var prog=data.programs.find(function(p){return p.id===pid;});if(!prog)return;if(!prog.performers)prog.performers=[];prog.performers.push({id:'n'+Date.now(),num:prog.performers.length+1,name:'新規',ruby:'',role:'',ready:false,checkedBy:'',checkedAt:'',staffStamp:''});saveProgPerformers(pid);render();}
 function addProgram(){
   if(currentRole!=='host')return;
   var name=prompt('プログラム名を入力（例: SPECIAL SHOW / ゲスト名）');
@@ -516,19 +549,30 @@ function addProgram(){
 }
 function resetToInitial(){if(!can('edit'))return;if(!confirm('全データを初期状態に戻しますか？'))return;data=JSON.parse(JSON.stringify(INITIAL_DATA));saveData();render();}
 function delProgram(pid){if(!can('edit'))return;var prog=data.programs.find(function(p){return p.id===pid;});if(!prog||!confirm('「'+prog.name+'」を削除？'))return;data.programs=data.programs.filter(function(p){return p.id!==pid;});saveData();render();}
-function delPerformer(){if(!can('edit')||!editPerf||!editPerfProgId)return;if(!confirm('「'+editPerf.name+'」を削除？'))return;var prog=data.programs.find(function(p){return p.id===editPerfProgId;});if(!prog)return;prog.performers=prog.performers.filter(function(a){return a.id!==editPerf.id;});prog.performers.forEach(function(a,i){a.num=i+1;});editPerf=null;editPerfProgId=null;saveData();render();}
+function delPerformer(){if(!can('edit')||!editPerf||!editPerfProgId)return;if(!confirm('「'+editPerf.name+'」を削除？'))return;var prog=data.programs.find(function(p){return p.id===editPerfProgId;});if(!prog)return;prog.performers=prog.performers.filter(function(a){return a.id!==editPerf.id;});prog.performers.forEach(function(a,i){a.num=i+1;});var pid=editPerfProgId;editPerf=null;editPerfProgId=null;saveProgPerformers(pid);render();}
 function scrollToProg(pid){var el=document.getElementById('prog-'+pid);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
 function selectProgram(pid){selectedProgramId=(selectedProgramId===pid)?'':pid;render();scrollToProg(pid);}
-function openEditPerf(pid,aid){if(!can('edit'))return;var prog=data.programs.find(function(p){return p.id===pid;});editPerf=JSON.parse(JSON.stringify(prog.performers.find(function(a){return a.id===aid;})));editPerfProgId=pid;render();}
+function openEditPerf(pid,aid){if(!can('edit'))return;var prog=data.programs.find(function(p){return p.id===pid;});editPerf=JSON.parse(JSON.stringify(prog.performers.find(function(a){return a.id===aid;})));if(!editPerf.bordered)editPerf.bordered=false;if(!editPerf.keep)editPerf.keep=false;if(!editPerf.koshitsu)editPerf.koshitsu=false;if(!editPerf.pairGroup)editPerf.pairGroup=0;editPerfProgId=pid;render();}
 function openEditProg(pid){if(!can('edit'))return;editProg=JSON.parse(JSON.stringify(data.programs.find(function(p){return p.id===pid;})));render();}
 function closeModals(){editPerf=null;editPerfProgId=null;editProg=null;var mc=document.getElementById('modalContainer');if(mc)mc.innerHTML='';render();}
-function renderModals(){var mc=document.getElementById('modalContainer');if(!mc)return;mc.innerHTML='';render();}
-function saveEditPerf(){var prog=data.programs.find(function(p){return p.id===editPerfProgId;});var perf=prog.performers.find(function(a){return a.id===editPerf.id;});perf.num=parseInt(document.getElementById('eNum').value)||0;perf.name=document.getElementById('eName').value;perf.ruby=document.getElementById('eRuby').value;perf.role=document.getElementById('eRole').value;perf.bordered=!!editPerf.bordered;perf.keep=!!editPerf.keep;editPerf=null;editPerfProgId=null;saveData();render();}
-function saveEditProg(){var prog=data.programs.find(function(p){return p.id===editProg.id;});prog.name=document.getElementById('epName').value;prog.honban=document.getElementById('epHonban').value;prog.standby=document.getElementById('epStandby').value;prog.color=editProg.color;editProg=null;saveData();render();}
+function renderModals(){
+  // Save current input values before re-rendering
+  if(editPerf){
+    var el;
+    el=document.getElementById('eNum');if(el)editPerf.num=parseInt(el.value)||0;
+    el=document.getElementById('eName');if(el)editPerf.name=el.value;
+    el=document.getElementById('eRuby');if(el)editPerf.ruby=el.value;
+    el=document.getElementById('eRole');if(el)editPerf.role=el.value;
+    el=document.getElementById('ePairGroup');if(el)editPerf.pairGroup=parseInt(el.value)||0;
+  }
+  var mc=document.getElementById('modalContainer');if(!mc)return;mc.innerHTML='';render();
+}
+function saveEditPerf(){var prog=data.programs.find(function(p){return p.id===editPerfProgId;});var perf=prog.performers.find(function(a){return a.id===editPerf.id;});perf.num=parseInt(document.getElementById('eNum').value)||0;perf.name=document.getElementById('eName').value;perf.ruby=document.getElementById('eRuby').value;perf.role=document.getElementById('eRole').value;perf.bordered=!!editPerf.bordered;perf.keep=!!editPerf.keep;perf.koshitsu=!!editPerf.koshitsu;perf.pairGroup=parseInt(document.getElementById('ePairGroup').value)||0;var pid=editPerfProgId;var aid=editPerf.id;editPerf=null;editPerfProgId=null;savePerfField(pid,aid,{num:perf.num,name:perf.name,ruby:perf.ruby,role:perf.role,bordered:perf.bordered,keep:perf.keep,koshitsu:perf.koshitsu,pairGroup:perf.pairGroup});render();}
+function saveEditProg(){var prog=data.programs.find(function(p){return p.id===editProg.id;});prog.name=document.getElementById('epName').value;prog.honban=document.getElementById('epHonban').value;prog.standby=document.getElementById('epStandby').value;prog.color=editProg.color;var pid=editProg.id;editProg=null;saveProgField(pid,{name:prog.name,honban:prog.honban,standby:prog.standby,color:prog.color});render();}
 function onDragStart(e,perfId,progId){if(!can('edit'))return;dragSrc={perfId:perfId,progId:progId};e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','');}
 function onDragOver(perfId){if(dragOverId!==perfId){dragOverId=perfId;render();}}
-function onDrop(perfId,progId){if(!dragSrc||!can('edit'))return;var srcId=dragSrc.perfId,srcProg=dragSrc.progId;if(srcProg===progId){var p=data.programs.find(function(x){return x.id===progId;});var si=p.performers.findIndex(function(a){return a.id===srcId;});var ti=p.performers.findIndex(function(a){return a.id===perfId;});if(si===-1||ti===-1)return;var m=p.performers.splice(si,1)[0];p.performers.splice(ti,0,m);p.performers.forEach(function(a,i){a.num=i+1;});}else{var sp=data.programs.find(function(x){return x.id===srcProg;});var tp=data.programs.find(function(x){return x.id===progId;});var si2=sp.performers.findIndex(function(a){return a.id===srcId;});var ti2=tp.performers.findIndex(function(a){return a.id===perfId;});if(si2===-1)return;var m2=sp.performers.splice(si2,1)[0];tp.performers.splice(ti2===-1?tp.performers.length:ti2,0,m2);sp.performers.forEach(function(a,i){a.num=i+1;});tp.performers.forEach(function(a,i){a.num=i+1;});}dragSrc=null;dragOverId=null;saveData();render();}
-function handleDropOnProg(pid,e){e.preventDefault();if(!dragSrc||!can('edit')||dragSrc.progId===pid)return;var sp=data.programs.find(function(x){return x.id===dragSrc.progId;});var tp=data.programs.find(function(x){return x.id===pid;});var si=sp.performers.findIndex(function(a){return a.id===dragSrc.perfId;});if(si===-1)return;var m=sp.performers.splice(si,1)[0];m.num=tp.performers.length+1;tp.performers.push(m);sp.performers.forEach(function(a,i){a.num=i+1;});dragSrc=null;dragOverId=null;saveData();render();}
+function onDrop(perfId,progId){if(!dragSrc||!can('edit'))return;var srcId=dragSrc.perfId,srcProg=dragSrc.progId;if(srcProg===progId){var p=data.programs.find(function(x){return x.id===progId;});var si=p.performers.findIndex(function(a){return a.id===srcId;});var ti=p.performers.findIndex(function(a){return a.id===perfId;});if(si===-1||ti===-1)return;var m=p.performers.splice(si,1)[0];p.performers.splice(ti,0,m);p.performers.forEach(function(a,i){a.num=i+1;});saveProgPerformers(progId);}else{var sp=data.programs.find(function(x){return x.id===srcProg;});var tp=data.programs.find(function(x){return x.id===progId;});var si2=sp.performers.findIndex(function(a){return a.id===srcId;});var ti2=tp.performers.findIndex(function(a){return a.id===perfId;});if(si2===-1)return;var m2=sp.performers.splice(si2,1)[0];tp.performers.splice(ti2===-1?tp.performers.length:ti2,0,m2);sp.performers.forEach(function(a,i){a.num=i+1;});tp.performers.forEach(function(a,i){a.num=i+1;});saveProgPerformers(srcProg);saveProgPerformers(progId);}dragSrc=null;dragOverId=null;render();}
+function handleDropOnProg(pid,e){e.preventDefault();if(!dragSrc||!can('edit')||dragSrc.progId===pid)return;var sp=data.programs.find(function(x){return x.id===dragSrc.progId;});var tp=data.programs.find(function(x){return x.id===pid;});var si=sp.performers.findIndex(function(a){return a.id===dragSrc.perfId;});if(si===-1)return;var m=sp.performers.splice(si,1)[0];m.num=tp.performers.length+1;tp.performers.push(m);sp.performers.forEach(function(a,i){a.num=i+1;});var srcProg=dragSrc.progId;dragSrc=null;dragOverId=null;saveProgPerformers(srcProg);saveProgPerformers(pid);render();}
 </script>
 </body>
 </html>
